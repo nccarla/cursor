@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import VerifyCode from './pages/VerifyCode';
 import ResetPassword from './pages/ResetPassword';
@@ -15,8 +16,39 @@ import SupervisorPanel from './pages/SupervisorPanel';
 import AlertasCriticas from './pages/AlertasCriticas';
 import GestionAgentes from './pages/GestionAgentes';
 import { UserRole } from './types';
+import { api } from './services/api';
 
 const App: React.FC = () => {
+  // Validar al cargar la aplicación que el usuario tenga token válido
+  // Si hay usuario sin token, limpiar datos (no está registrado en n8n)
+  useEffect(() => {
+    const user = api.getUser();
+    const token = api.getToken();
+    
+    // Si hay usuario pero NO hay token, limpiar (no está registrado en n8n)
+    if (user && !token) {
+      console.warn('Usuario sin token detectado. Limpiando datos inválidos.');
+      api.logout();
+    }
+    
+    // Si hay token pero NO hay usuario, limpiar
+    if (token && !user) {
+      console.warn('Token sin usuario detectado. Limpiando datos inválidos.');
+      api.logout();
+    }
+    
+    // Si hay ambos, validar estructura
+    if (user && token) {
+      if (!user.id || !user.name || !user.role) {
+        console.warn('Usuario con estructura inválida. Limpiando datos.');
+        api.logout();
+      } else if (!['AGENTE', 'SUPERVISOR', 'GERENTE'].includes(user.role)) {
+        console.warn('Usuario con rol inválido. Limpiando datos.');
+        api.logout();
+      }
+    }
+  }, []);
+
   return (
     <HashRouter>
       <Routes>
@@ -60,6 +92,13 @@ const App: React.FC = () => {
                 <Route path="agentes" element={
                   <ProtectedRoute allowedRoles={[UserRole.SUPERVISOR]}>
                     <GestionAgentes />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Crear nueva cuenta - Solo para supervisores */}
+                <Route path="crear-cuenta" element={
+                  <ProtectedRoute allowedRoles={[UserRole.SUPERVISOR]}>
+                    <Register />
                   </ProtectedRoute>
                 } />
                 

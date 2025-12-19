@@ -40,7 +40,7 @@ const ForgotPassword: React.FC = () => {
             <div className="w-16 h-16 bg-gradient-brand-blue rounded-2xl flex items-center justify-center mb-6 shadow-brand-blue-lg">
               <Mail className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 leading-tight mb-3">¿Problemas para entrar?</h2>
+            <h2 className="text-3xl font-semibold text-slate-900 leading-tight mb-3">¿Problemas para entrar?</h2>
             <p className="text-slate-600 mt-2 font-medium leading-relaxed">
               Ingresa tu correo institucional y te enviaremos un código para restablecer tu contraseña.
             </p>
@@ -48,7 +48,7 @@ const ForgotPassword: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Correo Institucional</label>
+              <label className="block text-xs font-medium text-slate-400 tracking-normal mb-2">Correo Institucional</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
@@ -87,15 +87,15 @@ const ForgotPassword: React.FC = () => {
             <button
               type="submit"
               disabled={loading || status === 'success'}
-              className="w-full text-white font-black py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
-              style={{background: 'linear-gradient(to right, var(--color-accent-darkred), var(--color-brand-blue))'}}
+              className="w-full text-white font-semibold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
+              style={{background: 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)'}}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue))';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-darkred), var(--color-brand-blue))';
+                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)';
               }}
             >
               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Enviar Código de Recuperación'}

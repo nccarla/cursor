@@ -1,13 +1,12 @@
 // Configuración de la API y Webhooks
 export const API_CONFIG = {
-  // URL del webhook de autenticación (Make.com)
-  // Puedes configurarlo mediante variable de entorno o usar una URL por defecto
-  WEBHOOK_URL: import.meta.env.VITE_WEBHOOK_URL || 'https://hook.eu2.make.com/t2uyeo6ia0u13ms076nh4nhb6hsjbp2g',
+  // URL del webhook de n8n para autenticación y gestión de usuarios
+  WEBHOOK_URL: import.meta.env.VITE_WEBHOOK_URL || 'https://n8n.red.com.sv/webhook/6f27bb4b-bfcd-4776-b554-5194569be2a7',
   
   // Timeout para las peticiones (en milisegundos)
   TIMEOUT: 10000,
   
-  // Modo demo: si es true, usa datos mock si el webhook falla
-  DEMO_MODE_FALLBACK: import.meta.env.VITE_DEMO_MODE !== 'false',
+  // Modo demo: deshabilitado - solo se permite acceso con webhook de n8n
+  DEMO_MODE_FALLBACK: false,
 };
 

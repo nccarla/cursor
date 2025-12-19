@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import { Role } from '../types';
@@ -13,6 +13,35 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const user = api.getUser();
+
+  // Validar que el usuario tenga token válido (debe estar registrado en n8n)
+  useEffect(() => {
+    const token = api.getToken();
+    
+    // Si no hay token, el usuario no está autenticado correctamente
+    if (!token) {
+      console.warn('Token no encontrado. Redirigiendo al login.');
+      api.logout();
+      navigate('/login');
+      return;
+    }
+    
+    // Validar estructura del usuario
+    if (!user || !user.id || !user.name || !user.role) {
+      console.warn('Usuario con estructura inválida. Redirigiendo al login.');
+      api.logout();
+      navigate('/login');
+      return;
+    }
+    
+    // Validar rol
+    if (!['AGENTE', 'SUPERVISOR', 'GERENTE'].includes(user.role)) {
+      console.warn('Usuario con rol inválido. Redirigiendo al login.');
+      api.logout();
+      navigate('/login');
+      return;
+    }
+  }, [user, navigate]);
 
   const handleLogout = () => {
     api.logout();
@@ -67,31 +96,32 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      <aside className="w-64 text-white flex flex-col fixed h-full z-10 shadow-2xl border-r" style={{background: 'linear-gradient(180deg, var(--color-brand-blue) 0%, var(--color-accent-darkred) 100%)', borderColor: 'rgba(0,0,0,0.2)'}}>
+      <aside className="w-64 text-white flex flex-col fixed h-full z-10 shadow-2xl border-r" style={{background: 'linear-gradient(180deg, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)', borderColor: 'rgba(0,0,0,0.2)'}}>
         <div className="p-6 border-b" style={{borderColor: 'rgba(255,255,255,0.1)'}}>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-brand-blue flex items-center justify-center shadow-brand-blue-lg">
               <ShieldAlert className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-lg font-black tracking-tight text-white">INTELFON SAC</h1>
-              <p className="text-[10px] text-white/70 uppercase tracking-widest font-bold">Gestión de Casos</p>
+              <h1 className="text-lg font-bold tracking-tight text-white">INTELFON SAC</h1>
+              <p className="text-xs text-white/70 tracking-normal font-normal">Gestión de Casos</p>
             </div>
           </div>
         </div>
         
         <nav className="flex-1 mt-4 px-3 space-y-1 overflow-y-auto">
-          {navItems.filter(item => item.roles.includes(user?.role as Role)).map((item) => {
+          {navItems.filter(item => item.roles.includes(user?.role as Role)).map((item, idx) => {
             const isActive = location.pathname === item.path;
             return (
               <button
                 key={item.name}
                 onClick={() => navigate(item.path)}
-                className={`group flex items-center w-full px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-200 relative ${
+                className={`group flex items-center w-full px-4 py-3 text-sm font-semibold rounded-xl transition-all duration-300 relative animate-in slide-in-from-left fade-in ${
                   isActive 
                     ? 'bg-gradient-brand-blue text-white shadow-brand-blue-lg' 
                     : 'text-white/70 hover:bg-white/10 hover:text-white'
                 }`}
+                style={{ animationDelay: `${idx * 50}ms` }}
               >
                 {isActive && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>
@@ -114,8 +144,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-accent-blue rounded-full border-2" style={{borderColor: 'var(--color-brand-blue)'}}></div>
             </div>
             <div className="ml-3 overflow-hidden flex-1 min-w-0">
-              <p className="text-sm font-bold truncate text-white">{user?.name}</p>
-              <p className="text-[10px] text-white/60 truncate uppercase font-black tracking-tighter">
+              <p className="text-sm font-normal truncate text-white">{user?.name}</p>
+              <p className="text-xs text-white/60 truncate font-normal tracking-normal">
                 {user?.role}
               </p>
             </div>
@@ -133,10 +163,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <main className="flex-1 ml-64 min-h-screen">
         <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200/50 shadow-sm">
           <div className="px-8 py-6">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-3xl font-semibold text-slate-900 tracking-tight">
               {getPageTitle()}
             </h2>
-            <p className="text-slate-500 text-sm mt-1 font-medium">INTELFON SAC &bull; Centro de Soporte</p>
+            <p className="text-slate-500 text-sm mt-1 font-normal tracking-normal">INTELFON SAC &bull; Centro de Soporte</p>
           </div>
         </div>
         <div className="p-8">

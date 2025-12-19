@@ -45,19 +45,19 @@ const ResetPassword: React.FC = () => {
           <div className="w-16 h-16 bg-gradient-brand-blue text-white rounded-2xl flex items-center justify-center mb-6 shadow-brand-blue-lg">
             <Lock className="w-8 h-8" />
           </div>
-          <h2 className="text-3xl font-black text-slate-900 leading-tight mb-3">Nueva contraseña</h2>
+          <h2 className="text-3xl font-semibold text-slate-900 leading-tight mb-3">Nueva contraseña</h2>
           <p className="text-slate-600 mt-2 font-medium">Crea una contraseña segura que no hayas usado antes.</p>
 
           <form onSubmit={handleReset} className="mt-10 space-y-6">
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Nueva Contraseña</label>
+              <label className="block text-xs font-medium text-slate-400 tracking-normal mb-2">Nueva Contraseña</label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-medium"
+                className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 transition-all font-medium"
               />
             </div>
             <div>
@@ -68,7 +68,7 @@ const ResetPassword: React.FC = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-medium"
+                className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 transition-all font-medium"
               />
             </div>
 
@@ -89,15 +89,15 @@ const ResetPassword: React.FC = () => {
             <button
               type="submit"
               disabled={loading || status === 'success'}
-              className="w-full text-white font-black py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
-              style={{background: 'linear-gradient(to right, var(--color-accent-darkred), var(--color-brand-blue))'}}
+              className="w-full text-white font-semibold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
+              style={{background: 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)'}}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue))';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-darkred), var(--color-brand-blue))';
+                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)';
               }}
             >
               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Restablecer Contraseña'}

@@ -19,12 +19,12 @@ const VerifyCode: React.FC = () => {
     try {
       const response = await api.verifyResetCode(email, code);
       if (response.ok) {
-        navigate(`/reset-password?email=${encodeURIComponent(email)}&tempToken=${response.tempToken}`);
+        navigate(`/reset-password?email=${encodeURIComponent(email)}&tempToken=${response.tempToken || 'demo'}`);
       } else {
         setError('Código inválido o expirado.');
       }
-    } catch (err) {
-      setError('Error al verificar el código.');
+    } catch (err: any) {
+      setError(err.message || 'Error al verificar el código.');
     } finally {
       setLoading(false);
     }
@@ -37,12 +37,12 @@ const VerifyCode: React.FC = () => {
           <div className="w-16 h-16 bg-gradient-brand-blue text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-brand-blue-lg">
             <ShieldCheck className="w-8 h-8" />
           </div>
-          <h2 className="text-3xl font-black text-slate-900 mb-3">Verifica tu identidad</h2>
+          <h2 className="text-3xl font-semibold text-slate-900 mb-3">Verifica tu identidad</h2>
           <p className="text-slate-600 mt-2 font-medium">Hemos enviado un código a <b className="text-slate-900">{email}</b></p>
 
           <form onSubmit={handleVerify} className="mt-10 space-y-6 text-left">
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3 text-center">Código de 6 dígitos</label>
+              <label className="block text-xs font-medium text-slate-400 tracking-normal mb-3 text-center">Código de 6 dígitos</label>
               <input
                 type="text"
                 maxLength={6}
@@ -50,7 +50,7 @@ const VerifyCode: React.FC = () => {
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="000000"
-                className="w-full text-center text-4xl font-black tracking-[0.5em] py-4 rounded-2xl border-2 border-accent-light bg-accent-light focus:outline-none focus:bg-white transition-all"
+                className="w-full text-center text-4xl font-semibold tracking-[0.5em] py-4 rounded-2xl border-2 border-accent-light bg-accent-light focus:outline-none focus:bg-white transition-all"
                 onFocus={(e) => {
                   e.target.style.borderColor = 'var(--color-accent-blue)';
                 }}
@@ -70,15 +70,15 @@ const VerifyCode: React.FC = () => {
             <button
               type="submit"
               disabled={loading || code.length < 6}
-              className="w-full text-white font-black py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
-              style={{background: 'linear-gradient(to right, var(--color-accent-darkred), var(--color-brand-blue))'}}
+              className="w-full text-white font-semibold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
+              style={{background: 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)'}}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue))';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-darkred), var(--color-brand-blue))';
+                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)';
               }}
             >
               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Verificar Código'}

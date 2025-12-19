@@ -141,31 +141,39 @@ const BandejaCasos: React.FC = () => {
             <table className="w-full text-left">
               <thead className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b-2 border-slate-200">
                 <tr>
-                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-wider">ID Caso</th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-wider">Cliente</th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-wider">Categoría</th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-wider text-right">Acción</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-600 tracking-normal">ID Caso</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-600 tracking-normal">Cliente</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-600 tracking-normal">Categoría</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-600 tracking-normal">Estado</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-600 tracking-normal text-right">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map((caso) => (
+                {filtered.map((caso, idx) => (
                   <tr 
                     key={caso.id} 
-                    className="transition-all duration-200 cursor-pointer group border-l-4 border-transparent"
-                    style={{'--hover-bg': 'rgba(16, 122, 180, 0.05)', '--hover-border': 'var(--color-accent-blue)'} as React.CSSProperties & { '--hover-bg': string, '--hover-border': string }}
+                    className={`transition-all duration-300 cursor-pointer group border-l-4 border-transparent animate-in slide-in-from-left fade-in`}
+                    style={{
+                      animationDelay: `${idx * 30}ms`,
+                      '--hover-bg': 'rgba(16, 122, 180, 0.05)', 
+                      '--hover-border': 'var(--color-accent-blue)'
+                    } as React.CSSProperties & { '--hover-bg': string, '--hover-border': string }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(16, 122, 180, 0.05)';
                       e.currentTarget.style.borderLeftColor = 'var(--color-accent-blue)';
+                      e.currentTarget.style.transform = 'translateX(4px)';
+                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(16, 122, 180, 0.1)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = '';
                       e.currentTarget.style.borderLeftColor = 'transparent';
+                      e.currentTarget.style.transform = 'translateX(0)';
+                      e.currentTarget.style.boxShadow = '';
                     }} 
                     onClick={() => navigate(`/app/casos/${caso.id}`)}
                   >
                     <td className="px-6 py-4">
-                      <span className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors">{caso.ticketNumber || (caso as any).idCaso}</span>
+                      <span className="text-sm font-semibold text-slate-900 group-hover:text-slate-700 transition-colors">{caso.ticketNumber || (caso as any).idCaso}</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm font-semibold text-slate-800">{caso.clientName || caso.cliente?.nombreEmpresa}</span>
@@ -194,11 +202,11 @@ const BandejaCasos: React.FC = () => {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" style={{backgroundColor: 'rgba(20, 84, 120, 0.6)'}}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform animate-in zoom-in-95 duration-200 border border-slate-200/50">
+        <div className="fixed inset-0 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300" style={{backgroundColor: 'rgba(20, 84, 120, 0.6)'}}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform animate-in zoom-in-95 scale-in duration-300 border border-slate-200/50">
             <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
               <div>
-                <h3 className="text-2xl font-black text-slate-900">Crear Nuevo Caso SAC</h3>
+                <h3 className="text-2xl font-semibold text-slate-900">Crear Nuevo Caso SAC</h3>
                 <p className="text-xs text-slate-500 mt-1 font-medium">Completa los datos del caso</p>
               </div>
               <button 
@@ -210,10 +218,10 @@ const BandejaCasos: React.FC = () => {
             </div>
             <form onSubmit={handleCreateCase} className="p-6 space-y-5">
               <div>
-                <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Empresa / Cliente</label>
+                <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Empresa / Cliente</label>
                 <input 
                   type="text" required 
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium"
                   placeholder="Nombre de la empresa"
                   value={newCase.clientName}
                   onChange={e => setNewCase({...newCase, clientName: e.target.value})}
@@ -223,7 +231,7 @@ const BandejaCasos: React.FC = () => {
                 <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Asunto</label>
                 <input 
                   type="text" required 
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium"
                   placeholder="Resumen del caso"
                   value={newCase.subject}
                   onChange={e => setNewCase({...newCase, subject: e.target.value})}
@@ -233,7 +241,7 @@ const BandejaCasos: React.FC = () => {
                 <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Descripción</label>
                 <textarea 
                   required rows={4}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-slate-50 focus:bg-white font-medium resize-none"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium resize-none"
                   placeholder="Detalles del caso..."
                   value={newCase.description}
                   onChange={e => setNewCase({...newCase, description: e.target.value})}
@@ -243,7 +251,7 @@ const BandejaCasos: React.FC = () => {
                 <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Email Cliente</label>
                 <input 
                   type="email" required 
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium"
                   placeholder="cliente@empresa.com"
                   value={newCase.email}
                   onChange={e => setNewCase({...newCase, email: e.target.value})}
