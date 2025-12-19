@@ -69,7 +69,12 @@ const BandejaCasos: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200/50 backdrop-blur-sm">
+      <div 
+        className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center p-6 rounded-2xl shadow-lg border-2 backdrop-blur-sm bg-white"
+        style={{
+          borderColor: 'rgba(226, 232, 240, 0.5)'
+        }}
+      >
         <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
           <input
@@ -78,10 +83,13 @@ const BandejaCasos: React.FC = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-accent-light border border-accent-light rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all text-sm font-medium shadow-sm"
-            style={{'--tw-ring-color': 'var(--color-accent-blue)', '--tw-ring-opacity': '0.2'} as React.CSSProperties & { '--tw-ring-color': string, '--tw-ring-opacity': string }}
+            style={{
+              '--tw-ring-color': 'var(--color-brand-red)',
+              '--tw-ring-opacity': '0.2'
+            } as React.CSSProperties & { '--tw-ring-color': string, '--tw-ring-opacity': string }}
             onFocus={(e) => {
-              e.target.style.borderColor = 'var(--color-accent-blue)';
-              e.target.style.boxShadow = '0 0 0 2px rgba(16, 122, 180, 0.2)';
+              e.target.style.borderColor = 'var(--color-brand-red)';
+              e.target.style.boxShadow = '0 0 0 2px rgba(200, 21, 27, 0.2)';
             }}
             onBlur={(e) => {
               e.target.style.borderColor = 'var(--color-accent-light)';
@@ -99,8 +107,8 @@ const BandejaCasos: React.FC = () => {
               className="pl-12 pr-10 py-3 bg-accent-light border border-accent-light rounded-xl focus:outline-none transition-all text-sm font-medium appearance-none cursor-pointer shadow-sm hover:bg-white"
               style={{color: 'var(--color-accent-gray)'}}
               onFocus={(e) => {
-                e.target.style.borderColor = 'var(--color-accent-blue)';
-                e.target.style.boxShadow = '0 0 0 2px rgba(16, 122, 180, 0.2)';
+                e.target.style.borderColor = 'var(--color-brand-red)';
+                e.target.style.boxShadow = '0 0 0 2px rgba(200, 21, 27, 0.2)';
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = 'var(--color-accent-light)';
@@ -113,13 +121,13 @@ const BandejaCasos: React.FC = () => {
           </div>
           <button 
             onClick={() => setShowModal(true)}
-            className="bg-gradient-brand-blue text-white px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-brand-blue-lg hover:shadow-xl hover:-translate-y-0.5"
-            style={{background: 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))'}}
+            className="text-white px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+            style={{background: 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))'}}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue), var(--color-accent-blue))';
+              e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-red), var(--color-brand-red))';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+              e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))';
             }}
           >
             <Plus className="w-5 h-5" /> Nuevo Caso
@@ -128,7 +136,7 @@ const BandejaCasos: React.FC = () => {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/50 p-16 text-center">
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-slate-200/50 p-16 text-center">
           <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Search className="w-10 h-10 text-slate-400" />
           </div>
@@ -136,7 +144,7 @@ const BandejaCasos: React.FC = () => {
           <p className="text-slate-500 text-sm">Intenta ajustar los filtros de búsqueda</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/50 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-slate-200/50 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b-2 border-slate-200">
@@ -159,10 +167,10 @@ const BandejaCasos: React.FC = () => {
                       '--hover-border': 'var(--color-accent-blue)'
                     } as React.CSSProperties & { '--hover-bg': string, '--hover-border': string }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(16, 122, 180, 0.05)';
-                      e.currentTarget.style.borderLeftColor = 'var(--color-accent-blue)';
+                      e.currentTarget.style.backgroundColor = 'rgba(200, 21, 27, 0.05)';
+                      e.currentTarget.style.borderLeftColor = 'var(--color-brand-red)';
                       e.currentTarget.style.transform = 'translateX(4px)';
-                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(16, 122, 180, 0.1)';
+                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(200, 21, 27, 0.1)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = '';
@@ -190,7 +198,7 @@ const BandejaCasos: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end">
-                        <ChevronRight className="w-5 h-5 transition-all" style={{color: 'var(--color-accent-gray)'}} onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent-blue)'; e.currentTarget.style.transform = 'translateX(4px)'; }} onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-accent-gray)'; e.currentTarget.style.transform = ''; }} />
+                        <ChevronRight className="w-5 h-5 transition-all" style={{color: 'var(--color-accent-gray)'}} onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-brand-red)'; e.currentTarget.style.transform = 'translateX(4px)'; }} onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-accent-gray)'; e.currentTarget.style.transform = ''; }} />
                       </div>
                     </td>
                   </tr>

@@ -20,12 +20,12 @@ import { api } from './services/api';
 
 const App: React.FC = () => {
   // Validar al cargar la aplicación que el usuario tenga token válido
-  // Si hay usuario sin token, limpiar datos (no está registrado en n8n)
+  // Si hay usuario sin token, limpiar datos (no está registrado en n8n o no es cuenta demo)
   useEffect(() => {
     const user = api.getUser();
     const token = api.getToken();
     
-    // Si hay usuario pero NO hay token, limpiar (no está registrado en n8n)
+    // Si hay usuario pero NO hay token, limpiar (no está registrado en n8n ni es cuenta demo)
     if (user && !token) {
       console.warn('Usuario sin token detectado. Limpiando datos inválidos.');
       api.logout();
@@ -37,7 +37,7 @@ const App: React.FC = () => {
       api.logout();
     }
     
-    // Si hay ambos, validar estructura
+    // Si hay ambos, validar estructura (permite cuentas demo y cuentas de n8n)
     if (user && token) {
       if (!user.id || !user.name || !user.role) {
         console.warn('Usuario con estructura inválida. Limpiando datos.');

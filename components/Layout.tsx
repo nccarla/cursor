@@ -14,7 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const user = api.getUser();
 
-  // Validar que el usuario tenga token válido (debe estar registrado en n8n)
+  // Validar que el usuario tenga token válido (debe estar registrado en n8n o ser cuenta demo)
   useEffect(() => {
     const token = api.getToken();
     
@@ -34,7 +34,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       return;
     }
     
-    // Validar rol
+    // Validar rol (permite cuentas demo y cuentas de n8n)
     if (!['AGENTE', 'SUPERVISOR', 'GERENTE'].includes(user.role)) {
       console.warn('Usuario con rol inválido. Redirigiendo al login.');
       api.logout();

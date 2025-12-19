@@ -26,22 +26,22 @@ const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 font-sans text-slate-900">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{background: 'linear-gradient(135deg, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)'}}>
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50">
+        <div className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50 animate-in zoom-in-95 fade-in">
           <Link 
             to="/login" 
-            className="inline-flex items-center text-sm font-bold text-slate-500 hover:text-slate-700 mb-8 transition-colors px-3 py-2 rounded-xl hover:bg-slate-50"
+            className="inline-flex items-center text-sm font-bold text-slate-500 hover:text-slate-700 mb-8 transition-colors px-3 py-2 rounded-xl hover:bg-slate-50 animate-in fade-in slide-in-from-left"
           >
             <ArrowLeft className="w-4 h-4 mr-2" /> Volver al Login
           </Link>
 
-          <div className="mb-8">
-            <div className="w-16 h-16 bg-gradient-brand-blue rounded-2xl flex items-center justify-center mb-6 shadow-brand-blue-lg">
+          <div className="mb-8 animate-in fade-in slide-in-from-top">
+            <div className="w-16 h-16 bg-gradient-brand-blue rounded-2xl flex items-center justify-center mb-6 shadow-brand-blue-lg animate-in scale-in fade-in animate-float">
               <Mail className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-3xl font-semibold text-slate-900 leading-tight mb-3">¿Problemas para entrar?</h2>
-            <p className="text-slate-600 mt-2 font-medium leading-relaxed">
+            <h2 className="text-3xl font-semibold text-slate-900 leading-tight mb-3 animate-in slide-in-from-bottom fade-in" style={{animationDelay: '100ms'}}>¿Problemas para entrar?</h2>
+            <p className="text-slate-600 mt-2 font-medium leading-relaxed animate-in slide-in-from-bottom fade-in" style={{animationDelay: '200ms'}}>
               Ingresa tu correo institucional y te enviaremos un código para restablecer tu contraseña.
             </p>
           </div>

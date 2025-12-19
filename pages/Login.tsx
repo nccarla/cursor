@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { LogIn, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { LogIn, Loader2, AlertCircle, ShieldCheck, Mail, Lock } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -50,72 +50,125 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{background: 'linear-gradient(135deg, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)'}}>
       <div className="max-w-md w-full">
-        <div className="text-center mb-10 animate-in fade-in slide-in-from-top">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-brand-red text-white mb-6 shadow-brand-red-lg transform -rotate-3 animate-in scale-in fade-in animate-float">
-            <ShieldCheck className="w-12 h-12" />
+        <div className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50 animate-in zoom-in-95 fade-in">
+          {/* Logo y Nombre de la Empresa */}
+          <div className="text-center mb-8 animate-in fade-in slide-in-from-top">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-brand-blue mb-4 shadow-brand-blue-lg transform -rotate-3 animate-in scale-in fade-in animate-float">
+              <ShieldCheck className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl font-semibold text-slate-900 leading-tight mb-2 animate-in slide-in-from-bottom fade-in" style={{animationDelay: '100ms', letterSpacing: '-0.02em'}}>INTELFON</h1>
+            <p className="text-slate-600 font-medium leading-relaxed animate-in slide-in-from-bottom fade-in" style={{animationDelay: '200ms', letterSpacing: '0'}}>
+              Sistema de Gestión SAC
+            </p>
           </div>
-          <h1 className="text-5xl font-bold text-white tracking-tight animate-in slide-in-from-bottom fade-in" style={{animationDelay: '100ms'}}>INTELFON</h1>
-          <p className="mt-2 text-white/80 font-normal text-sm tracking-normal animate-in slide-in-from-bottom fade-in" style={{animationDelay: '200ms'}}>Sistema de Gestión SAC</p>
-        </div>
-
-        <div className="bg-white rounded-3xl shadow-2xl p-10 relative overflow-hidden animate-in zoom-in-95 fade-in" style={{animationDelay: '300ms'}}>
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-brand-red"></div>
           
           <form onSubmit={handleLogin} className="space-y-6">
             {error && (
-              <div className="bg-accent-red/10 text-brand-red p-4 rounded-2xl flex items-start gap-3 border-2 border-accent-red/20 animate-in slide-in-from-top duration-300">
-                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-brand-red" />
-                <p className="text-sm font-normal tracking-normal text-brand-red">{error}</p>
+              <div className="bg-gradient-to-r from-red-50 to-rose-50 text-red-700 p-4 rounded-2xl flex items-center gap-3 border-2 border-red-200 shadow-sm animate-in slide-in-from-top duration-300">
+                <AlertCircle className="w-5 h-5 shrink-0" style={{color: 'var(--color-brand-red)'}} />
+                <p className="text-sm font-bold">{error}</p>
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="block text-sm font-normal text-accent-gray tracking-normal ml-1 mb-2">Correo Institucional</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="usuario@intelfon.com"
-                className="w-full px-5 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:ring-4 focus:ring-accent-blue/20 focus:border-accent-blue focus:bg-white transition-all font-normal text-base placeholder:text-slate-400"
-                style={{'--tw-ring-color': 'var(--color-accent-blue)'} as React.CSSProperties}
-              />
+            <div>
+              <label className="block text-xs font-medium text-slate-400 tracking-normal mb-2">Correo Institucional</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ejemplo@intelfon.com"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:bg-white transition-all font-medium"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--color-accent-blue)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--color-accent-light)';
+                    e.target.style.boxShadow = '';
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <label className="block text-sm font-normal text-accent-gray tracking-normal">Contraseña</label>
-                <Link to="/forgot-password" className="text-sm font-normal text-accent-blue hover:text-brand-blue tracking-normal transition-colors">
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-xs font-medium text-slate-400 tracking-normal">Contraseña</label>
+                <Link to="/forgot-password" className="text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors">
                   ¿Olvidaste el acceso?
                 </Link>
               </div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-5 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:ring-4 focus:ring-accent-blue/20 focus:border-accent-blue focus:bg-white transition-all font-normal text-base placeholder:text-slate-400"
-                style={{'--tw-ring-color': 'var(--color-accent-blue)'} as React.CSSProperties}
-              />
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:bg-white transition-all font-medium"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--color-accent-blue)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--color-accent-light)';
+                    e.target.style.boxShadow = '';
+                  }}
+                />
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-brand font-semibold py-5 rounded-2xl transition-all flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed group tracking-normal text-base"
+              className="w-full text-white font-semibold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
+              style={{background: 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)'}}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue))';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)';
+              }}
             >
               {loading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
                 <>
                   Entrar al Sistema
-                  <LogIn className="w-4 h-4 ml-3 group-hover:translate-x-1 transition-transform" />
+                  <LogIn className="w-4 h-4 ml-3" />
                 </>
               )}
             </button>
           </form>
 
+          <div className="mt-8 pt-6 border-t border-slate-200 text-center">
+            <p className="text-xs text-slate-400 font-medium tracking-normal mb-3">Acceso Rápido Demo</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button 
+                onClick={() => setEmail('agente@intelfon.com')} 
+                className="px-4 py-2 bg-slate-100 text-xs font-medium text-slate-600 rounded-full border border-slate-200 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+              >
+                Agente
+              </button>
+              <button 
+                onClick={() => setEmail('supervisor@intelfon.com')} 
+                className="px-4 py-2 bg-slate-100 text-xs font-medium text-slate-600 rounded-full border border-slate-200 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+              >
+                Supervisor
+              </button>
+              <button 
+                onClick={() => setEmail('gerente@intelfon.com')} 
+                className="px-4 py-2 bg-slate-100 text-xs font-medium text-slate-600 rounded-full border border-slate-200 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+              >
+                Gerente
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

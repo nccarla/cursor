@@ -134,9 +134,40 @@ const authenticateWithWebhook = async (email: string, password: string): Promise
   return user;
 };
 
-// NOTA: No hay mapeos de emails ni modo demo
-// Todas las cuentas DEBEN estar registradas en el flujo de n8n
-// El webhook de n8n es la única fuente de verdad para autenticación
+// Cuentas demo permitidas (solo para desarrollo/pruebas)
+// Estas cuentas pueden acceder sin pasar por el webhook de n8n
+const DEMO_ACCOUNTS: Record<string, { role: Role; name: string }> = {
+  'agente@intelfon.com': { role: 'AGENTE', name: 'Agente Demo' },
+  'supervisor@intelfon.com': { role: 'SUPERVISOR', name: 'Supervisor Demo' },
+  'gerente@intelfon.com': { role: 'GERENTE', name: 'Gerente Demo' },
+};
+
+// Función auxiliar para autenticación en modo demo (solo para cuentas demo permitidas)
+const authenticateDemo = (email: string): User => {
+  initStorage();
+  
+  const emailLower = (email || '').toLowerCase().trim();
+  const demoAccount = DEMO_ACCOUNTS[emailLower];
+  
+  if (!demoAccount) {
+    throw new Error('Cuenta demo no permitida');
+  }
+  
+  const user: User = {
+    id: `demo-${demoAccount.role.toLowerCase()}`,
+    name: demoAccount.name,
+    role: demoAccount.role,
+    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(demoAccount.name)}&background=0f172a&color=fff`
+  };
+
+  // Generar un token demo simple
+  const demoToken = `demo-token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  localStorage.setItem('intelfon_token', demoToken);
+  localStorage.setItem('intelfon_user', JSON.stringify(user));
+  
+  return user;
+};
 
 export const api = {
   getUser(): User | null {
@@ -163,9 +194,16 @@ export const api = {
       throw new Error('Formato de correo electrónico inválido');
     }
     
-    // Solo autenticación mediante webhook de n8n - sin modo demo
-    // Si el webhook falla o la cuenta no está registrada, se lanza error
-    // NO HAY FALLBACK - la cuenta DEBE estar en n8n
+    const emailLower = email.trim().toLowerCase();
+    
+    // Verificar si es una cuenta demo permitida
+    if (DEMO_ACCOUNTS[emailLower]) {
+      // Para cuentas demo, cualquier contraseña es válida
+      return authenticateDemo(emailLower);
+    }
+    
+    // Para todas las demás cuentas, DEBEN estar registradas en n8n
+    // Solo autenticación mediante webhook de n8n
     try {
       return await authenticateWithWebhook(email.trim(), pass);
     } catch (error: any) {

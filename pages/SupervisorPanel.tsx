@@ -30,44 +30,72 @@ const SupervisorPanel: React.FC = () => {
     <div className="space-y-8">
       {/* Metrics Row con Carrusel en móviles */}
       <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, idx) => (
-          <div 
-            key={idx} 
-            className={`bg-white p-6 rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-lg transition-all duration-300 flex items-center justify-between group hover:-translate-y-2 animate-in fade-in slide-in-from-bottom animate-stagger-${idx + 1}`}
-            style={{ animationDelay: `${idx * 100}ms` }}
-          >
-            <div className="flex-1">
-              <p className="text-xs font-medium text-accent-gray tracking-normal mb-2">{stat.label}</p>
-              <h3 className="text-3xl font-semibold group-hover:scale-110 transition-transform duration-300" style={{color: stat.color}}>
-                {typeof stat.value === 'number' ? <AnimatedNumber value={stat.value} /> : stat.value}
-              </h3>
+        {stats.map((stat, idx) => {
+          const gradients = [
+            'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+            'linear-gradient(135deg, rgba(200, 21, 27, 0.1) 0%, rgba(245, 41, 56, 0.1) 100%)',
+            'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+            'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
+          ];
+          const textColors = ['text-slate-900', 'text-red-700', 'text-slate-900', 'text-slate-900'];
+          const labelColors = ['text-slate-600', 'text-red-600', 'text-slate-600', 'text-slate-600'];
+          return (
+            <div 
+              key={idx} 
+              className="p-6 rounded-2xl border-2 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-between group hover:-translate-y-2 animate-in fade-in slide-in-from-bottom bg-white"
+              style={{ 
+                background: gradients[idx],
+                borderColor: idx === 1 ? 'rgba(200, 21, 27, 0.2)' : 'rgba(226, 232, 240, 0.5)',
+                animationDelay: `${idx * 100}ms` 
+              }}
+            >
+              <div className="flex-1">
+                <p className={`text-xs font-medium ${labelColors[idx]} tracking-normal mb-2`} style={{letterSpacing: '0'}}>{stat.label}</p>
+                <h3 className={`text-3xl font-semibold ${textColors[idx]} group-hover:scale-110 transition-transform duration-300`} style={{letterSpacing: '-0.02em', lineHeight: '1.3'}}>
+                  {typeof stat.value === 'number' ? <AnimatedNumber value={stat.value} /> : stat.value}
+                </h3>
+              </div>
+              <div className="p-4 rounded-xl group-hover:scale-125 group-hover:rotate-6 transition-all duration-300 shadow-lg animate-float" style={{backgroundColor: idx === 1 ? 'rgba(200, 21, 27, 0.15)' : 'rgba(26, 26, 26, 0.08)', animationDelay: `${idx * 200}ms`}}>
+                <stat.icon className="w-6 h-6" style={{color: stat.color}} />
+              </div>
             </div>
-            <div className={`p-4 rounded-xl group-hover:scale-125 group-hover:rotate-6 transition-all duration-300 shadow-sm animate-float`} style={{backgroundColor: stat.bg, animationDelay: `${idx * 200}ms`}}>
-              <stat.icon className="w-6 h-6" style={{color: stat.color}} />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Carrusel para móviles */}
       <div className="md:hidden">
         <Carousel autoPlay={true} interval={4000} showDots={true} showArrows={true}>
-          {stats.map((stat, idx) => (
-            <div 
-              key={idx} 
-              className="bg-white p-6 rounded-2xl border border-slate-200/50 shadow-sm flex items-center justify-between mx-2"
-            >
-              <div className="flex-1">
-                <p className="text-xs font-medium text-accent-gray tracking-normal mb-2">{stat.label}</p>
-                <h3 className="text-3xl font-semibold" style={{color: stat.color}}>
-                  {typeof stat.value === 'number' ? <AnimatedNumber value={stat.value} /> : stat.value}
-                </h3>
+          {stats.map((stat, idx) => {
+            const gradients = [
+              'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+              'linear-gradient(135deg, rgba(200, 21, 27, 0.1) 0%, rgba(245, 41, 56, 0.1) 100%)',
+              'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+              'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
+            ];
+            const textColors = ['text-slate-900', 'text-red-700', 'text-slate-900', 'text-slate-900'];
+            const labelColors = ['text-slate-600', 'text-red-600', 'text-slate-600', 'text-slate-600'];
+            return (
+              <div 
+                key={idx} 
+                className="p-6 rounded-2xl border-2 shadow-lg flex items-center justify-between mx-2 bg-white"
+                style={{
+                  background: gradients[idx],
+                  borderColor: idx === 1 ? 'rgba(200, 21, 27, 0.2)' : 'rgba(226, 232, 240, 0.5)'
+                }}
+              >
+                <div className="flex-1">
+                  <p className={`text-xs font-medium ${labelColors[idx]} tracking-normal mb-2`}>{stat.label}</p>
+                  <h3 className={`text-3xl font-semibold ${textColors[idx]}`}>
+                    {typeof stat.value === 'number' ? <AnimatedNumber value={stat.value} /> : stat.value}
+                  </h3>
+                </div>
+                <div className="p-4 rounded-xl shadow-lg" style={{backgroundColor: idx === 1 ? 'rgba(200, 21, 27, 0.15)' : 'rgba(26, 26, 26, 0.08)'}}>
+                  <stat.icon className="w-6 h-6" style={{color: stat.color}} />
+                </div>
               </div>
-              <div className="p-4 rounded-xl shadow-sm" style={{backgroundColor: stat.bg}}>
-                <stat.icon className="w-6 h-6" style={{color: stat.color}} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </Carousel>
       </div>
 
@@ -75,7 +103,7 @@ const SupervisorPanel: React.FC = () => {
         {/* Critical Cases List */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex justify-between items-center p-4 rounded-2xl border-2" style={{background: 'linear-gradient(to right, rgba(200, 21, 27, 0.1), rgba(245, 41, 56, 0.1))', borderColor: 'rgba(200, 21, 27, 0.2)'}}>
-            <h3 className="text-xl font-semibold text-slate-900 flex items-center gap-3">
+            <h3 className="text-xl font-semibold text-slate-900 flex items-center gap-3" style={{letterSpacing: '-0.01em', lineHeight: '1.4'}}>
               <div className="p-2 bg-brand-red rounded-xl shadow-brand-red-lg">
                 <AlertCircle className="w-5 h-5 text-white" />
               </div>
@@ -92,42 +120,43 @@ const SupervisorPanel: React.FC = () => {
             </button>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
-            <div className="divide-y divide-slate-100">
-              {casosCriticos.length > 0 ? (
-                casosCriticos.map((caso, idx) => (
-                  <div 
-                    key={caso.id} 
-                    onClick={() => navigate(`/app/casos/${caso.id}`)}
-                    className={`p-5 transition-all duration-300 cursor-pointer flex items-center justify-between group border-l-4 border-transparent animate-in slide-in-from-left fade-in`}
-                    style={{ 
-                      animationDelay: `${idx * 50}ms`,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(200, 21, 27, 0.05)';
-                      e.currentTarget.style.borderLeftColor = 'var(--color-brand-red)';
-                      e.currentTarget.style.transform = 'translateX(4px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '';
-                      e.currentTarget.style.borderLeftColor = 'transparent';
-                      e.currentTarget.style.transform = 'translateX(0)';
-                    }}
-                  >
+          {casosCriticos.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4">
+              {casosCriticos.map((caso, idx) => (
+                <div 
+                  key={caso.id} 
+                  onClick={() => navigate(`/app/casos/${caso.id}`)}
+                  className="bg-white rounded-2xl border-2 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer p-5 group animate-in slide-in-from-left fade-in relative"
+                  style={{ 
+                    animationDelay: `${idx * 50}ms`,
+                    borderColor: 'rgba(200, 21, 27, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-brand-red)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(200, 21, 27, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(200, 21, 27, 0.2)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '';
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="w-1.5 h-12 bg-gradient-to-b from-red-500 to-red-600 rounded-full shadow-sm"></div>
+                      <div className="w-1.5 h-12 bg-gradient-to-b from-red-500 to-red-600 rounded-full shadow-sm flex-shrink-0"></div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-semibold text-slate-900 transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-brand-red)'} onMouseLeave={(e) => e.currentTarget.style.color = ''}>{caso.id}</span>
+                          <span className="text-sm font-semibold text-slate-900 transition-colors" style={{letterSpacing: '0'}} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-brand-red)'} onMouseLeave={(e) => e.currentTarget.style.color = ''}>{caso.id}</span>
                           <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border shadow-sm ${STATE_COLORS[caso.status]}`}>
                             {caso.status}
                           </span>
                         </div>
-                        <p className="text-sm font-semibold text-slate-800 truncate mb-1">{caso.subject}</p>
-                        <p className="text-xs text-slate-500">Asignado a: <span className="font-bold text-slate-700">{caso.agenteAsignado.nombre}</span></p>
+                      <p className="text-sm font-semibold text-slate-800 truncate mb-1" style={{letterSpacing: '0', lineHeight: '1.5'}}>{caso.subject}</p>
+                      <p className="text-xs text-slate-600" style={{letterSpacing: '0', lineHeight: '1.5'}}>Asignado a: <span className="font-semibold text-slate-700">{caso.agenteAsignado.nombre}</span></p>
                       </div>
                     </div>
-                    <div className="text-right flex items-center gap-6 ml-4">
+                    <div className="flex items-center gap-6 flex-shrink-0">
                       <div className="hidden sm:block bg-red-50 px-3 py-2 rounded-lg border border-red-100">
                         <p className="text-xs font-medium text-red-600 mb-0.5">Atraso</p>
                         <p className="text-base font-semibold text-red-700">{caso.diasAbierto} días</p>
@@ -135,31 +164,36 @@ const SupervisorPanel: React.FC = () => {
                       <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-red-500 group-hover:translate-x-1 transition-all" />
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="p-16 text-center">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <AlertCircle className="w-8 h-8 text-green-500" />
-                  </div>
-                  <p className="text-slate-600 font-semibold mb-1">No hay casos críticos</p>
-                  <p className="text-slate-400 text-sm">¡Buen trabajo! Todo está bajo control.</p>
                 </div>
-              )}
+              ))}
             </div>
-          </div>
+          ) : (
+            <div className="bg-white rounded-2xl border-2 shadow-lg p-16 text-center" style={{borderColor: 'rgba(200, 21, 27, 0.2)'}}>
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-green-500" />
+              </div>
+              <p className="text-slate-600 font-semibold mb-1">No hay casos críticos</p>
+              <p className="text-slate-400 text-sm">¡Buen trabajo! Todo está bajo control.</p>
+            </div>
+          )}
         </div>
 
         {/* Quick Agent Status */}
         <div className="space-y-4">
           <div className="p-4 rounded-2xl border-2" style={{background: 'linear-gradient(to right, rgba(16, 122, 180, 0.1), rgba(64, 154, 187, 0.1))', borderColor: 'rgba(16, 122, 180, 0.2)'}}>
-            <h3 className="text-xl font-semibold text-slate-900 flex items-center gap-3">
+            <h3 className="text-xl font-semibold text-slate-900 flex items-center gap-3" style={{letterSpacing: '-0.01em', lineHeight: '1.4'}}>
               <div className="p-2 bg-accent-blue rounded-xl shadow-brand-blue-lg">
                 <Users className="w-5 h-5 text-white" />
               </div>
               Rendimiento de Agentes
             </h3>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-200/50 shadow-sm p-5 space-y-3">
+          <div 
+            className="rounded-2xl border-2 shadow-lg p-5 space-y-3 bg-white"
+            style={{
+              borderColor: 'rgba(226, 232, 240, 0.5)'
+            }}
+          >
             {[
               { name: 'Juan Agente', active: 5, status: 'Online', color: 'bg-green-500', ring: 'ring-green-500/20' },
               { name: 'Ana Agente', active: 3, status: 'Online', color: 'bg-green-500', ring: 'ring-green-500/20' },
@@ -167,7 +201,9 @@ const SupervisorPanel: React.FC = () => {
             ].map((agente, idx) => (
               <div 
                 key={idx} 
-                className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all duration-200 border border-transparent hover:border-slate-200 group"
+                className="flex items-center justify-between p-3 rounded-xl transition-all duration-200 border border-transparent hover:border-slate-200 group bg-slate-50"
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
               >
                 <div className="flex items-center gap-3 flex-1">
                   <div className={`relative w-3 h-3 rounded-full ${agente.color} ${agente.ring} ring-2`}>
@@ -178,8 +214,8 @@ const SupervisorPanel: React.FC = () => {
                     <p className="text-xs text-slate-500 font-medium">{agente.status}</p>
                   </div>
                 </div>
-                <div className="text-right bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 group-hover:bg-slate-100 group-hover:border-slate-300 transition-all">
-                  <p className="text-base font-semibold text-slate-900 group-hover:text-slate-700">{agente.active}</p>
+                <div className="text-right bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 transition-all">
+                  <p className="text-base font-semibold text-slate-900">{agente.active}</p>
                   <p className="text-xs text-slate-500 font-medium">Casos</p>
                 </div>
               </div>
