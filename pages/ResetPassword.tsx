@@ -39,14 +39,14 @@ const ResetPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 font-sans">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 font-sans">
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-3xl shadow-2xl p-10">
-          <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+        <div className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50">
+          <div className="w-16 h-16 bg-gradient-brand-blue text-white rounded-2xl flex items-center justify-center mb-6 shadow-brand-blue-lg">
             <Lock className="w-8 h-8" />
           </div>
-          <h2 className="text-3xl font-black text-slate-900 leading-tight">Nueva contraseña</h2>
-          <p className="text-slate-500 mt-2 font-medium">Crea una contraseña segura que no hayas usado antes.</p>
+          <h2 className="text-3xl font-black text-slate-900 leading-tight mb-3">Nueva contraseña</h2>
+          <p className="text-slate-600 mt-2 font-medium">Crea una contraseña segura que no hayas usado antes.</p>
 
           <form onSubmit={handleReset} className="mt-10 space-y-6">
             <div>
@@ -73,15 +73,15 @@ const ResetPassword: React.FC = () => {
             </div>
 
             {status === 'success' && (
-              <div className="bg-green-50 text-green-700 p-4 rounded-2xl flex items-center gap-3 border border-green-100 animate-in fade-in duration-300">
-                <CheckCircle2 className="w-5 h-5" />
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 p-4 rounded-2xl flex items-center gap-3 border-2 border-green-200 animate-in fade-in duration-300 shadow-sm">
+                <CheckCircle2 className="w-5 h-5 shrink-0" style={{color: 'var(--color-accent-blue-2)'}} />
                 <p className="text-sm font-bold flex-1">¡Contraseña actualizada! Volviendo al login...</p>
               </div>
             )}
 
             {status === 'error' && (
-              <div className="bg-red-50 text-red-600 p-4 rounded-2xl flex items-center gap-3 border border-red-100">
-                <AlertCircle className="w-5 h-5 shrink-0" />
+              <div className="bg-gradient-to-r from-red-50 to-rose-50 text-red-700 p-4 rounded-2xl flex items-center gap-3 border-2 border-red-200 shadow-sm">
+                <AlertCircle className="w-5 h-5 shrink-0" style={{color: 'var(--color-brand-red)'}} />
                 <p className="text-sm font-bold">{errorMsg}</p>
               </div>
             )}
@@ -89,7 +89,16 @@ const ResetPassword: React.FC = () => {
             <button
               type="submit"
               disabled={loading || status === 'success'}
-              className="w-full bg-slate-900 text-white font-bold py-5 rounded-2xl shadow-xl hover:bg-blue-600 transition-all flex items-center justify-center disabled:opacity-50"
+              className="w-full text-white font-black py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
+              style={{background: 'linear-gradient(to right, var(--color-accent-darkred), var(--color-brand-blue))'}}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-darkred), var(--color-brand-blue))';
+              }}
             >
               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Restablecer Contraseña'}
             </button>

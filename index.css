@@ -44,5 +44,209 @@
   background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue-2));
 }
 
+/* Animaciones y transiciones mejoradas */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-from-top {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes zoom-in-95 {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-duration: 200ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.slide-in-from-top {
+  animation-name: slide-in-from-top;
+}
+
+.zoom-in-95 {
+  animation-name: zoom-in-95;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Mejoras de accesibilidad */
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Transiciones suaves para elementos interactivos */
+button, a, input, select, textarea {
+  transition: all 0.2s ease;
+}
+
+/* Mejora de contraste y legibilidad */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Clases utilitarias con colores de marca Intelfon */
+.text-brand-red { color: var(--color-brand-red); }
+.text-brand-blue { color: var(--color-brand-blue); }
+.text-brand-gray { color: var(--color-brand-gray); }
+.text-accent-red { color: var(--color-accent-red); }
+.text-accent-blue { color: var(--color-accent-blue); }
+.text-accent-blue-2 { color: var(--color-accent-blue-2); }
+.text-accent-blue-3 { color: var(--color-accent-blue-3); }
+.text-accent-gray { color: var(--color-accent-gray); }
+
+.bg-brand-red { background-color: var(--color-brand-red); }
+.bg-brand-blue { background-color: var(--color-brand-blue); }
+.bg-brand-gray { background-color: var(--color-brand-gray); }
+.bg-accent-red { background-color: var(--color-accent-red); }
+.bg-accent-blue { background-color: var(--color-accent-blue); }
+.bg-accent-blue-2 { background-color: var(--color-accent-blue-2); }
+.bg-accent-blue-3 { background-color: var(--color-accent-blue-3); }
+.bg-accent-gray { background-color: var(--color-accent-gray); }
+.bg-accent-light { background-color: var(--color-accent-light); }
+.bg-accent-darkred { background-color: var(--color-accent-darkred); }
+
+.border-brand-red { border-color: var(--color-brand-red); }
+.border-brand-blue { border-color: var(--color-brand-blue); }
+.border-accent-red { border-color: var(--color-accent-red); }
+.border-accent-blue { border-color: var(--color-accent-blue); }
+.border-accent-blue-2 { border-color: var(--color-accent-blue-2); }
+
+/* Gradientes de marca */
+.bg-gradient-brand-blue {
+  background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue-2));
+}
+
+.bg-gradient-brand-red {
+  background: linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red));
+}
+
+.bg-gradient-brand-hero {
+  background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue-2), var(--color-accent-blue-3));
+}
+
+/* Fondos con opacidad para usar con colores de marca */
+.bg-brand-red\/10 { background-color: rgba(200, 21, 27, 0.1); }
+.bg-brand-red\/20 { background-color: rgba(200, 21, 27, 0.2); }
+.bg-brand-blue\/10 { background-color: rgba(20, 84, 120, 0.1); }
+.bg-brand-blue\/20 { background-color: rgba(20, 84, 120, 0.2); }
+.bg-accent-red\/10 { background-color: rgba(245, 41, 56, 0.1); }
+.bg-accent-red\/20 { background-color: rgba(245, 41, 56, 0.2); }
+.bg-accent-blue\/10 { background-color: rgba(16, 122, 180, 0.1); }
+.bg-accent-blue\/20 { background-color: rgba(16, 122, 180, 0.2); }
+
+/* Sombras con colores de marca */
+.shadow-brand-red {
+  box-shadow: 0 4px 6px -1px rgba(200, 21, 27, 0.1), 0 2px 4px -1px rgba(200, 21, 27, 0.06);
+}
+
+.shadow-brand-blue {
+  box-shadow: 0 4px 6px -1px rgba(20, 84, 120, 0.1), 0 2px 4px -1px rgba(20, 84, 120, 0.06);
+}
+
+.shadow-brand-red-lg {
+  box-shadow: 0 10px 15px -3px rgba(200, 21, 27, 0.1), 0 4px 6px -2px rgba(200, 21, 27, 0.05);
+}
+
+.shadow-brand-blue-lg {
+  box-shadow: 0 10px 15px -3px rgba(20, 84, 120, 0.1), 0 4px 6px -2px rgba(20, 84, 120, 0.05);
+}
+
+/* Actualizar focus-visible con color de marca */
+*:focus-visible {
+  outline: 2px solid var(--color-accent-blue-2);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Scrollbar con colores de marca */
+::-webkit-scrollbar-thumb {
+  background: var(--color-accent-gray);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-gray);
+}
+
+/* Clases para inputs con colores de marca */
+.input-brand {
+  background-color: var(--color-accent-light);
+  border-color: var(--color-accent-light);
+}
+
+.input-brand:focus {
+  border-color: var(--color-accent-blue);
+  box-shadow: 0 0 0 2px rgba(16, 122, 180, 0.2);
+  background-color: white;
+}
+
+/* Botones con gradiente de marca azul */
+.btn-brand-blue {
+  background: linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2));
+  color: white;
+}
+
+.btn-brand-blue:hover {
+  background: linear-gradient(to right, var(--color-brand-blue), var(--color-accent-blue));
+}
+
+/* Hover para filas de tabla */
+.table-row-hover:hover {
+  background-color: rgba(16, 122, 180, 0.05);
+  border-left-color: var(--color-accent-blue);
+}
+
+/* Texto hover azul */
+.text-hover-blue:hover {
+  color: var(--color-accent-blue);
+}
+
 
 

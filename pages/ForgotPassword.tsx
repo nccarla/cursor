@@ -26,16 +26,22 @@ const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 font-sans text-slate-900">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 font-sans text-slate-900">
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-3xl shadow-2xl p-10">
-          <Link to="/login" className="inline-flex items-center text-sm font-bold text-slate-400 hover:text-slate-600 mb-8 transition-colors">
+        <div className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50">
+          <Link 
+            to="/login" 
+            className="inline-flex items-center text-sm font-bold text-slate-500 hover:text-slate-700 mb-8 transition-colors px-3 py-2 rounded-xl hover:bg-slate-50"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" /> Volver al Login
           </Link>
 
           <div className="mb-8">
-            <h2 className="text-3xl font-black text-slate-900 leading-tight">¿Problemas para entrar?</h2>
-            <p className="text-slate-500 mt-2 font-medium leading-relaxed">
+            <div className="w-16 h-16 bg-gradient-brand-blue rounded-2xl flex items-center justify-center mb-6 shadow-brand-blue-lg">
+              <Mail className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 leading-tight mb-3">¿Problemas para entrar?</h2>
+            <p className="text-slate-600 mt-2 font-medium leading-relaxed">
               Ingresa tu correo institucional y te enviaremos un código para restablecer tu contraseña.
             </p>
           </div>
@@ -51,21 +57,29 @@ const ForgotPassword: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ejemplo@intelfon.com"
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 transition-all font-medium"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:bg-white transition-all font-medium"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--color-accent-blue)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--color-accent-light)';
+                    e.target.style.boxShadow = '';
+                  }}
                 />
               </div>
             </div>
 
             {status === 'success' && (
-              <div className="bg-green-50 text-green-700 p-4 rounded-2xl flex items-center gap-3 border border-green-100 animate-in fade-in duration-300">
-                <CheckCircle2 className="w-5 h-5" />
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 p-4 rounded-2xl flex items-center gap-3 border-2 border-green-200 animate-in fade-in duration-300 shadow-sm">
+                <CheckCircle2 className="w-5 h-5 shrink-0" style={{color: 'var(--color-accent-blue-2)'}} />
                 <p className="text-sm font-bold text-center flex-1">Código enviado. Redirigiendo...</p>
               </div>
             )}
 
             {status === 'error' && (
-              <div className="bg-red-50 text-red-600 p-4 rounded-2xl flex items-center gap-3 border border-red-100">
-                <AlertCircle className="w-5 h-5" />
+              <div className="bg-gradient-to-r from-red-50 to-rose-50 text-red-700 p-4 rounded-2xl flex items-center gap-3 border-2 border-red-200 shadow-sm">
+                <AlertCircle className="w-5 h-5 shrink-0" style={{color: 'var(--color-brand-red)'}} />
                 <p className="text-sm font-bold">No pudimos procesar la solicitud. Intenta de nuevo.</p>
               </div>
             )}
@@ -73,7 +87,16 @@ const ForgotPassword: React.FC = () => {
             <button
               type="submit"
               disabled={loading || status === 'success'}
-              className="w-full bg-slate-900 text-white font-bold py-5 rounded-2xl shadow-xl shadow-slate-900/10 hover:bg-blue-600 transition-all flex items-center justify-center disabled:opacity-50"
+              className="w-full text-white font-black py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
+              style={{background: 'linear-gradient(to right, var(--color-accent-darkred), var(--color-brand-blue))'}}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-darkred), var(--color-brand-blue))';
+              }}
             >
               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Enviar Código de Recuperación'}
             </button>

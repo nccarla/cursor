@@ -69,25 +69,43 @@ const BandejaCasos: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200/50 backdrop-blur-sm">
         <div className="relative flex-1 w-full max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
           <input
             type="text"
             placeholder="Buscar por ID, Cliente o Asunto..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+            className="w-full pl-12 pr-4 py-3 bg-accent-light border border-accent-light rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all text-sm font-medium shadow-sm"
+            style={{'--tw-ring-color': 'var(--color-accent-blue)', '--tw-ring-opacity': '0.2'} as React.CSSProperties & { '--tw-ring-color': string, '--tw-ring-opacity': string }}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'var(--color-accent-blue)';
+              e.target.style.boxShadow = '0 0 0 2px rgba(16, 122, 180, 0.2)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'var(--color-accent-light)';
+              e.target.style.boxShadow = '';
+            }}
           />
         </div>
         
-        <div className="flex gap-2 w-full md:w-auto">
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+        <div className="flex gap-3 w-full md:w-auto">
+          <div className="relative group">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-accent-gray w-5 h-5 pointer-events-none transition-colors" style={{color: 'var(--color-accent-gray)'}} />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm appearance-none"
+              className="pl-12 pr-10 py-3 bg-accent-light border border-accent-light rounded-xl focus:outline-none transition-all text-sm font-medium appearance-none cursor-pointer shadow-sm hover:bg-white"
+              style={{color: 'var(--color-accent-gray)'}}
+              onFocus={(e) => {
+                e.target.style.borderColor = 'var(--color-accent-blue)';
+                e.target.style.boxShadow = '0 0 0 2px rgba(16, 122, 180, 0.2)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'var(--color-accent-light)';
+                e.target.style.boxShadow = '';
+              }}
             >
               <option value="all">Todos los Estados</option>
               {Object.values(CaseStatus).map(s => <option key={s} value={s}>{s}</option>)}
@@ -95,105 +113,161 @@ const BandejaCasos: React.FC = () => {
           </div>
           <button 
             onClick={() => setShowModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"
+            className="bg-gradient-brand-blue text-white px-6 py-3 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-brand-blue-lg hover:shadow-xl hover:-translate-y-0.5"
+            style={{background: 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))'}}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue), var(--color-accent-blue))';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+            }}
           >
-            <Plus className="w-4 h-4" /> Nuevo Caso
+            <Plus className="w-5 h-5" /> Nuevo Caso
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-100">
-            <tr>
-              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">ID Caso</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cliente</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Categoría</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Estado</th>
-              <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Acción</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {filtered.map((caso) => (
-              <tr key={caso.id} className="hover:bg-slate-50 transition-colors cursor-pointer group" onClick={() => navigate(`/app/casos/${caso.id}`)}>
-                <td className="px-6 py-4">
-                  <span className="text-sm font-bold text-slate-900">{caso.ticketNumber || (caso as any).idCaso}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-sm font-semibold text-slate-800">{caso.clientName || caso.cliente?.nombreEmpresa}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md">
-                    {caso.category || caso.categoria?.nombre}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`text-xs font-bold px-3 py-1 rounded-full border ${STATE_COLORS[(caso.status || (caso as any).estado) as CaseStatus]}`}>
-                    {caso.status || (caso as any).estado}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button className="p-2 text-slate-400 group-hover:text-blue-600 transition-colors">
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/50 p-16 text-center">
+          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Search className="w-10 h-10 text-slate-400" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 mb-2">No se encontraron casos</h3>
+          <p className="text-slate-500 text-sm">Intenta ajustar los filtros de búsqueda</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/50 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b-2 border-slate-200">
+                <tr>
+                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-wider">ID Caso</th>
+                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-wider">Cliente</th>
+                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-wider">Categoría</th>
+                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-wider">Estado</th>
+                  <th className="px-6 py-4 text-xs font-black text-slate-600 uppercase tracking-wider text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((caso) => (
+                  <tr 
+                    key={caso.id} 
+                    className="transition-all duration-200 cursor-pointer group border-l-4 border-transparent"
+                    style={{'--hover-bg': 'rgba(16, 122, 180, 0.05)', '--hover-border': 'var(--color-accent-blue)'} as React.CSSProperties & { '--hover-bg': string, '--hover-border': string }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'rgba(16, 122, 180, 0.05)';
+                      e.currentTarget.style.borderLeftColor = 'var(--color-accent-blue)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '';
+                      e.currentTarget.style.borderLeftColor = 'transparent';
+                    }} 
+                    onClick={() => navigate(`/app/casos/${caso.id}`)}
+                  >
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors">{caso.ticketNumber || (caso as any).idCaso}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-semibold text-slate-800">{caso.clientName || caso.cliente?.nombreEmpresa}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center text-xs font-semibold px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg border border-slate-200">
+                        {caso.category || caso.categoria?.nombre}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center text-xs font-bold px-3 py-1.5 rounded-full border shadow-sm ${STATE_COLORS[(caso.status || (caso as any).estado) as CaseStatus]}`}>
+                        {caso.status || (caso as any).estado}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end">
+                        <ChevronRight className="w-5 h-5 transition-all" style={{color: 'var(--color-accent-gray)'}} onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent-blue)'; e.currentTarget.style.transform = 'translateX(4px)'; }} onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-accent-gray)'; e.currentTarget.style.transform = ''; }} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-xl font-black text-slate-800">Crear Nuevo Caso SAC</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200" style={{backgroundColor: 'rgba(20, 84, 120, 0.6)'}}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform animate-in zoom-in-95 duration-200 border border-slate-200/50">
+            <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900">Crear Nuevo Caso SAC</h3>
+                <p className="text-xs text-slate-500 mt-1 font-medium">Completa los datos del caso</p>
+              </div>
+              <button 
+                onClick={() => setShowModal(false)} 
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleCreateCase} className="p-6 space-y-4">
+            <form onSubmit={handleCreateCase} className="p-6 space-y-5">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Empresa / Cliente</label>
+                <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Empresa / Cliente</label>
                 <input 
                   type="text" required 
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg outline-none"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                  placeholder="Nombre de la empresa"
                   value={newCase.clientName}
                   onChange={e => setNewCase({...newCase, clientName: e.target.value})}
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Asunto</label>
+                <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Asunto</label>
                 <input 
                   type="text" required 
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg outline-none"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                  placeholder="Resumen del caso"
                   value={newCase.subject}
                   onChange={e => setNewCase({...newCase, subject: e.target.value})}
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Descripción</label>
+                <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Descripción</label>
                 <textarea 
-                  required rows={3}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg outline-none"
+                  required rows={4}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-slate-50 focus:bg-white font-medium resize-none"
+                  placeholder="Detalles del caso..."
                   value={newCase.description}
                   onChange={e => setNewCase({...newCase, description: e.target.value})}
                 ></textarea>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Email Cliente</label>
+                <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Email Cliente</label>
                 <input 
                   type="email" required 
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg outline-none"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                  placeholder="cliente@empresa.com"
                   value={newCase.email}
                   onChange={e => setNewCase({...newCase, email: e.target.value})}
                 />
               </div>
-              <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">
+              <div className="pt-2 flex gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setShowModal(false)} 
+                  className="flex-1 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all border border-slate-200"
+                >
                   Cancelar
                 </button>
-                <button type="submit" className="flex-1 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all">
+                <button 
+                  type="submit" 
+                  className="flex-1 py-3.5 bg-gradient-brand-blue text-white text-sm font-bold rounded-xl transition-all shadow-brand-blue-lg"
+                  style={{background: 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))'}}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue), var(--color-accent-blue))';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                  }}
+                >
                   Registrar Caso
                 </button>
               </div>
