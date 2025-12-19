@@ -1,0 +1,48 @@
+:root {
+  --color-brand-red: #c8151b;
+  --color-brand-blue: #145478;
+  --color-brand-gray: #afacb2;
+
+  --color-accent-red: #f52938;
+  --color-accent-darkred: #700306;
+  --color-accent-blue: #107ab4;
+  --color-accent-blue-2: #409abb;
+  --color-accent-blue-3: #7bb9cb;
+  --color-accent-gray: #989797;
+  --color-accent-light: #e4e4e4;
+  --color-accent-black: #000000;
+}
+
+/* Botón principal con colores de marca */
+.btn-brand {
+  background-color: var(--color-brand-red);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 12px 30px rgba(200, 21, 27, 0.25);
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-brand:hover {
+  background-color: var(--color-accent-red);
+  box-shadow: 0 14px 34px rgba(245, 41, 56, 0.28);
+  transform: translateY(-1px);
+}
+
+.btn-brand:focus-visible {
+  outline: 2px solid var(--color-accent-blue-2);
+  outline-offset: 3px;
+}
+
+.btn-brand:disabled {
+  background-color: var(--color-accent-gray);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Fondo hero con degradado de marca */
+.bg-brand-hero {
+  background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue-2));
+}
+
+
+
