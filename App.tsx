@@ -20,7 +20,12 @@ const App: React.FC = () => {
   return (
     <HashRouter>
       <Routes>
-        {/* Rutas Públicas de Autenticación */}
+        {/* 
+          RUTAS PÚBLICAS
+          - Login: Acceso público sin autenticación
+          - Assets estáticos: Servidos desde /public (manejados por Vite automáticamente)
+          - Rutas de recuperación de contraseña: Públicas
+        */}
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-code" element={<VerifyCode />} />
@@ -28,7 +33,11 @@ const App: React.FC = () => {
         
         <Route path="/unauthorized" element={<Unauthorized />} />
         
-        {/* Protected Routes */}
+        {/* 
+          RUTAS PROTEGIDAS - Solo acceso para colaboradores autenticados
+          Todas las rutas bajo /app/* requieren autenticación válida
+          Los assets en /public son accesibles públicamente sin autenticación
+        */}
         <Route path="/app/*" element={
           <ProtectedRoute>
             <Layout>
