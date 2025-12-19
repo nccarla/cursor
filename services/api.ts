@@ -30,19 +30,37 @@ const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account',
   const type = typeMap[scenario];
 
   try {
-    const response = await fetch(API_CONFIG.WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        type,
-        ...data,
-      }),
-      signal: controller.signal,
-    });
+    // Intentar la petición con CORS
+    let response: Response;
+    try {
+      response = await fetch(API_CONFIG.WEBHOOK_URL, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          type,
+          ...data,
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchError: any) {
+      // Si hay un error de red o CORS, proporcionar un mensaje más específico
+      if (fetchError.name === 'TypeError' && fetchError.message.includes('fetch')) {
+        throw new Error('Error de conexión: El servidor n8n no está permitiendo peticiones CORS. Contacta al administrador para configurar CORS en el servidor.');
+      }
+      throw fetchError;
+    }
 
     clearTimeout(timeoutId);
+
+    // Verificar si la respuesta es válida antes de intentar parsear JSON
+    if (!response.ok && response.status === 0) {
+      throw new Error('Error de CORS: El servidor no está permitiendo peticiones desde este origen.');
+    }
 
     const result = await response.json();
     
@@ -95,6 +113,22 @@ const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account',
   } catch (error: any) {
     if (error.name === 'AbortError') {
       throw new Error('Timeout: El servidor no respondió a tiempo. Verifica tu conexión.');
+    }
+    // Detectar errores específicos de CORS
+    if (error.message && (
+      error.message.includes('CORS') || 
+      error.message.includes('cors') ||
+      error.message.includes('fetch') ||
+      error.message.includes('NetworkError') ||
+      error.name === 'TypeError'
+    )) {
+      // En desarrollo, sugerir usar el proxy
+      const isDevelopment = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      if (isDevelopment) {
+        throw new Error('Error de CORS detectado. El proxy de desarrollo debería manejar esto automáticamente. Verifica la configuración de Vite.');
+      }
+      // En producción, indicar que el servidor necesita configurar CORS
+      throw new Error('Error de CORS: El servidor n8n necesita permitir peticiones desde este dominio. Contacta al administrador para configurar los headers CORS en n8n.');
     }
     if (error.message) {
       throw error;

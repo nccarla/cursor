@@ -1,13 +1,15 @@
 :root {
+  /* COLORES PRIMARIOS */
   --color-brand-red: #c8151b;
-  --color-brand-blue: #1a1a1a;
+  --color-brand-blue: #145478; /* Azul oscuro primario */
   --color-brand-gray: #afacb2;
 
+  /* COLORES SECUNDARIOS */
   --color-accent-red: #f52938;
   --color-accent-darkred: #700306;
-  --color-accent-blue: #2d2d2d;
-  --color-accent-blue-2: #4a4a4a;
-  --color-accent-blue-3: #6b6b6b;
+  --color-accent-blue: #107ab4; /* Azul brillante */
+  --color-accent-blue-2: #409abb; /* Azul medio */
+  --color-accent-blue-3: #7bb9cb; /* Azul pastel claro */
   --color-accent-gray: #989797;
   --color-accent-light: #e4e4e4;
   --color-accent-black: #000000;
@@ -29,7 +31,7 @@
 }
 
 .btn-brand:focus-visible {
-  outline: 2px solid var(--color-accent-blue-2);
+  outline: 2px solid var(--color-accent-blue);
   outline-offset: 3px;
 }
 
@@ -140,10 +142,10 @@
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(45, 45, 45, 0.4);
+    box-shadow: 0 0 0 0 rgba(16, 122, 180, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(45, 45, 45, 0);
+    box-shadow: 0 0 0 10px rgba(16, 122, 180, 0);
   }
 }
 
@@ -242,9 +244,9 @@
   background: #94a3b8;
 }
 
-/* Mejoras de accesibilidad */
+/* Mejoras de accesibilidad - Usando color de marca */
 *:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--color-accent-blue);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -326,7 +328,7 @@ button {
 
 /* Gradientes de marca */
 .bg-gradient-brand-blue {
-  background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue-2));
+  background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue));
 }
 
 .bg-gradient-brand-red {
@@ -334,7 +336,7 @@ button {
 }
 
 .bg-gradient-brand-hero {
-  background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue-2), var(--color-accent-blue-3));
+  background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue), var(--color-accent-blue-2));
 }
 
 /* Fondos con opacidad para usar con colores de marca */
@@ -353,7 +355,7 @@ button {
 }
 
 .shadow-brand-blue {
-  box-shadow: 0 4px 6px -1px rgba(26, 26, 26, 0.1), 0 2px 4px -1px rgba(26, 26, 26, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(20, 84, 120, 0.1), 0 2px 4px -1px rgba(20, 84, 120, 0.06);
 }
 
 .shadow-brand-red-lg {
@@ -366,7 +368,7 @@ button {
 
 /* Actualizar focus-visible con color de marca */
 *:focus-visible {
-  outline: 2px solid var(--color-accent-blue-2);
+  outline: 2px solid var(--color-accent-blue);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -389,23 +391,23 @@ button {
 
 .input-brand:focus {
   border-color: var(--color-accent-blue);
-  box-shadow: 0 0 0 2px rgba(45, 45, 45, 0.2);
+  box-shadow: 0 0 0 2px rgba(16, 122, 180, 0.2);
   background-color: white;
 }
 
 /* Botones con gradiente de marca azul */
 .btn-brand-blue {
-  background: linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2));
+  background: linear-gradient(to right, var(--color-brand-blue), var(--color-accent-blue));
   color: white;
 }
 
 .btn-brand-blue:hover {
-  background: linear-gradient(to right, var(--color-brand-blue), var(--color-accent-blue));
+  background: linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2));
 }
 
 /* Hover para filas de tabla */
 .table-row-hover:hover {
-  background-color: rgba(45, 45, 45, 0.05);
+  background-color: rgba(16, 122, 180, 0.05);
   border-left-color: var(--color-accent-blue);
 }
 

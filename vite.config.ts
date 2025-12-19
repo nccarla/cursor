@@ -9,6 +9,15 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        cors: true,
+        proxy: {
+          '/api/webhook': {
+            target: 'https://n8n.red.com.sv',
+            changeOrigin: true,
+            secure: true,
+            rewrite: (path) => '/webhook/6f27bb4b-bfcd-4776-b554-5194569be2a7',
+          },
+        },
       },
       plugins: [react()],
       define: {

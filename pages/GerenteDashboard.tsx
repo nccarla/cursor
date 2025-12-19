@@ -25,7 +25,7 @@ const GerenteDashboard: React.FC = () => {
     { name: 'Resueltos', value: casos.filter(c => c.status === CaseStatus.RESUELTO).length },
   ];
 
-  const COLORS = ['var(--color-brand-red)', 'var(--color-accent-red)', 'var(--color-accent-blue-2)', 'var(--color-accent-blue-3)'];
+  const COLORS = ['var(--color-brand-red)', 'var(--color-accent-red)', 'var(--color-accent-blue)', 'var(--color-accent-blue-2)'];
 
   return (
     <div className="space-y-6">
