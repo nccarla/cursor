@@ -6,7 +6,7 @@ export const API_CONFIG = {
   // Timeout para las peticiones (en milisegundos)
   TIMEOUT: 10000,
   
-  // Modo demo: deshabilitado - solo se permite acceso con webhook de n8n
+  // Modo demo: deshabilitado - solo se permite acceso con webhook
   DEMO_MODE_FALLBACK: false,
 };
 

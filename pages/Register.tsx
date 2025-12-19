@@ -31,12 +31,27 @@ const Register: React.FC = () => {
     }
 
     try {
-      await api.createAccount(email, password, name);
+      // Crear cuenta y almacenarla en n8n
+      const user = await api.createAccount(email, password, name);
+      
+      // Si llegamos aquí, el usuario fue creado y almacenado exitosamente en n8n
+      // Mostrar mensaje de éxito antes de redirigir
+      setError('');
       
       // Después de crear la cuenta, volver a gestión de agentes
-      navigate('/app/agentes');
+      setTimeout(() => {
+        navigate('/app/agentes');
+      }, 500);
     } catch (err: any) {
-      setError(err.message || 'Error al crear la cuenta. Intenta de nuevo.');
+      // Mejorar mensajes de error para indicar problemas con n8n
+      const errorMessage = err.message || 'Error al crear la cuenta. Intenta de nuevo.';
+      if (errorMessage.includes('ya existe') || errorMessage.includes('409')) {
+        setError('El usuario ya existe. Este correo electrónico ya está registrado en el sistema.');
+      } else if (errorMessage.includes('no pudo ser almacenado') || errorMessage.includes('almacenado')) {
+        setError('Error al almacenar el usuario. Verifica que el webhook esté configurado correctamente.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }

@@ -13,11 +13,21 @@ const initStorage = () => {
   }
 };
 
-// Función auxiliar para llamar al webhook de n8n
+// Función auxiliar para llamar al webhook de Make.com
 // Solo permite operaciones si el webhook responde correctamente
+// type: 'login' | 'forgot_password' | 'register'
 const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account', data: any) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+  // Mapear scenario a type para Make.com
+  const typeMap: Record<'login' | 'reset_password' | 'new_account', string> = {
+    'login': 'login',
+    'reset_password': 'forgot_password',
+    'new_account': 'register'
+  };
+
+  const type = typeMap[scenario];
 
   try {
     const response = await fetch(API_CONFIG.WEBHOOK_URL, {
@@ -26,7 +36,7 @@ const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        scenario,
+        type,
         ...data,
       }),
       signal: controller.signal,
@@ -34,44 +44,51 @@ const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account',
 
     clearTimeout(timeoutId);
 
-    // Si el servidor responde con error, la cuenta no está registrada o hay un problema
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ 
-        message: response.status === 401 || response.status === 403 
-          ? 'Credenciales inválidas o cuenta no registrada' 
-          : 'Error en la solicitud' 
-      }));
-      throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
-    }
-
     const result = await response.json();
     
-    // Validaciones estrictas según el escenario
-    if (scenario === 'login') {
-      // Para login, DEBE haber token y user
-      if (!result.token || !result.user) {
-        throw new Error('Credenciales inválidas o cuenta no registrada en el sistema');
+    // Verificar si hay error en la respuesta (formato de Make.com)
+    if (result.error === true) {
+      throw new Error(result.message || 'Error en la operación');
+    }
+
+    // Si la respuesta no es ok, también tratar como error
+    if (!response.ok) {
+      throw new Error(result.message || `Error ${response.status}: ${response.statusText}`);
+    }
+
+    // Validaciones según el escenario (formato de Make.com)
+    if (scenario === 'login' || scenario === 'new_account') {
+      // Para login y register, Make.com retorna: { id, name, role, email }
+      // NO retorna token ni user anidado
+      if (!result.id || !result.name || !result.role) {
+        throw new Error('Respuesta del webhook inválida. Faltan datos del usuario.');
       }
-      // Validar estructura mínima del usuario
-      if (!result.user.id || !result.user.name || !result.user.role) {
-        throw new Error('La cuenta no está correctamente registrada en el sistema');
+      
+      // Validar que el rol sea válido
+      if (!['AGENTE', 'SUPERVISOR', 'GERENTE'].includes(result.role)) {
+        throw new Error('Rol de usuario inválido. La cuenta debe tener un rol válido asignado.');
       }
-    } else if (scenario === 'new_account') {
-      // Para nueva cuenta, DEBE haber token y user
-      if (!result.token || !result.user) {
-        throw new Error('Error al crear la cuenta. La cuenta no pudo ser registrada en el sistema');
-      }
-      if (!result.user.id || !result.user.name || !result.user.role) {
-        throw new Error('La cuenta fue creada pero no tiene información completa');
-      }
+      
+      // Normalizar la respuesta al formato esperado internamente
+      return {
+        token: `token-${result.id}-${Date.now()}`, // Generar token local basado en el ID
+        user: {
+          id: result.id,
+          name: result.name,
+          role: result.role,
+          email: result.email,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(result.name)}&background=0f172a&color=fff`
+        }
+      };
     } else if (scenario === 'reset_password') {
       // Para reset password, validar según la acción
       if (data.action === 'verify_code' && !result.tempToken) {
         throw new Error('Código de verificación inválido o expirado');
       }
-      if (result.success === false) {
+      if (result.error === true || result.success === false) {
         throw new Error(result.message || 'Error en la operación de restablecimiento de contraseña');
       }
+      return result;
     }
     
     return result;
@@ -82,12 +99,12 @@ const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account',
     if (error.message) {
       throw error;
     }
-    throw new Error('Error de conexión con el servidor. La cuenta debe estar registrada en n8n.');
+    throw new Error('Error de conexión con el servidor. La cuenta debe estar registrada en el sistema.');
   }
 };
 
 // Función auxiliar para autenticación con webhook (escenario: login)
-// Solo permite acceso si el webhook de n8n valida la cuenta
+// Solo permite acceso si el webhook de ClickUp valida la cuenta
 const authenticateWithWebhook = async (email: string, password: string): Promise<User> => {
   const data = await callWebhook('login', { email, password });
   
@@ -115,14 +132,14 @@ const authenticateWithWebhook = async (email: string, password: string): Promise
   // Validar que el rol sea válido y venga del webhook
   const userRole = data.user.role;
   if (!userRole || !['AGENTE', 'SUPERVISOR', 'GERENTE'].includes(userRole)) {
-    throw new Error('Rol de usuario inválido. La cuenta debe tener un rol válido asignado en n8n.');
+    throw new Error('Rol de usuario inválido. La cuenta debe tener un rol válido asignado.');
   }
 
   // Almacenar el token JWT para futuras peticiones
   localStorage.setItem('intelfon_token', data.token);
   
   // Almacenar información del usuario EXACTAMENTE como viene del webhook
-  // NO se permite sobrescribir con mapeos locales - todo debe venir de n8n
+  // NO se permite sobrescribir con mapeos locales - todo debe venir del webhook
   const user: User = {
     id: data.user.id,
     name: data.user.name.trim(),
@@ -135,7 +152,7 @@ const authenticateWithWebhook = async (email: string, password: string): Promise
 };
 
 // Cuentas demo permitidas (solo para desarrollo/pruebas)
-// Estas cuentas pueden acceder sin pasar por el webhook de n8n
+// Estas cuentas pueden acceder sin pasar por el webhook
 const DEMO_ACCOUNTS: Record<string, { role: Role; name: string }> = {
   'agente@intelfon.com': { role: 'AGENTE', name: 'Agente Demo' },
   'supervisor@intelfon.com': { role: 'SUPERVISOR', name: 'Supervisor Demo' },
@@ -202,14 +219,26 @@ export const api = {
       return authenticateDemo(emailLower);
     }
     
-    // Para todas las demás cuentas, DEBEN estar registradas en n8n
-    // Solo autenticación mediante webhook de n8n
+    // Para todas las demás cuentas, DEBEN estar registradas y almacenadas en el sistema
+    // El webhook de Make.com verifica si el usuario existe en su base de datos
+    // Si el usuario no está almacenado, el webhook retornará un error
     try {
-      return await authenticateWithWebhook(email.trim(), pass);
+      const user = await authenticateWithWebhook(email.trim(), pass);
+      // Si llegamos aquí, el usuario está almacenado en el sistema y las credenciales son correctas
+      return user;
     } catch (error: any) {
       // Limpiar cualquier dato previo en caso de error
       localStorage.removeItem('intelfon_user');
       localStorage.removeItem('intelfon_token');
+      
+      // Mejorar el mensaje de error para indicar claramente si el usuario no está almacenado
+      const errorMessage = error.message || 'Error de autenticación';
+      if (errorMessage.includes('no registrada') || 
+          errorMessage.includes('no encontrado') || 
+          errorMessage.includes('no está almacenado') ||
+          errorMessage.includes('404')) {
+        throw new Error('Usuario no encontrado. El usuario no está almacenado en el sistema. Contacta a tu supervisor para crear una cuenta.');
+      }
       throw error;
     }
   },
@@ -401,8 +430,9 @@ export const api = {
     return true;
   },
 
-  // Crear nueva cuenta con webhook (escenario: new_account)
-  // SOLO el supervisor puede crear cuentas, y DEBE pasar por el webhook de n8n
+  // Crear nueva cuenta con webhook (type: register)
+  // SOLO el supervisor puede crear cuentas, y DEBE pasar por el webhook de Make.com
+  // El usuario se almacena directamente en el sistema a través del webhook
   async createAccount(email: string, password: string, name: string, additionalData?: any): Promise<User> {
     // Validaciones previas
     if (!email || !email.trim()) {
@@ -421,22 +451,26 @@ export const api = {
       throw new Error('Formato de correo electrónico inválido');
     }
     
-    // Llamar al webhook - NO HAY FALLBACK
+    // Llamar al webhook de Make.com para crear y almacenar el usuario
+    // Make.com retorna: { id, name, role, email } cuando es correcto
+    // O: { error: true, message: "..." } cuando hay error
     const data = await callWebhook('new_account', {
-      email: email.trim(),
+      email: email.trim().toLowerCase(),
       password: password.trim(),
       name: name.trim(),
+      createdAt: new Date().toISOString(),
       ...additionalData
     });
     
-    // El webhook debe retornar: { token: string, user: { id, name, role, avatar? } }
+    // callWebhook ya normaliza la respuesta, así que esperamos { token, user }
+    // Si no hay token o user, significa que el sistema no pudo crear/almacenar el usuario
     if (!data.token || !data.user) {
-      throw new Error('Error al crear la cuenta. La cuenta no pudo ser registrada en el sistema n8n.');
+      throw new Error('Error al crear la cuenta. El usuario no pudo ser almacenado en el sistema. Verifica que el webhook esté configurado correctamente.');
     }
 
-    // Validar estructura completa del usuario
+    // Validar estructura completa del usuario almacenado
     if (!data.user.id || !data.user.name || !data.user.role) {
-      throw new Error('La cuenta fue creada pero no tiene información completa. Contacta al administrador.');
+      throw new Error('La cuenta fue creada pero no tiene información completa. El usuario no se almacenó correctamente en el sistema.');
     }
 
     // Validar que el rol sea válido
@@ -444,10 +478,11 @@ export const api = {
       throw new Error('Rol de usuario inválido. La cuenta debe tener un rol válido asignado.');
     }
 
-    // Almacenar el token JWT
+    // Almacenar el token (el usuario ya está almacenado en el sistema)
     localStorage.setItem('intelfon_token', data.token);
     
     // Almacenar información del usuario EXACTAMENTE como viene del webhook
+    // Esto confirma que el usuario fue almacenado exitosamente
     const user: User = {
       id: data.user.id,
       name: data.user.name.trim(),
@@ -456,6 +491,8 @@ export const api = {
     };
 
     localStorage.setItem('intelfon_user', JSON.stringify(user));
+    
+    // El usuario ha sido creado y almacenado exitosamente en el sistema
     return user;
   }
 };

@@ -30,11 +30,15 @@ const Login: React.FC = () => {
       const errorMessage = err.message || 'Error de conexión con el servidor corporativo.';
       
       // Mensajes específicos para diferentes tipos de error
-      if (errorMessage.includes('no está registrada') || 
-          errorMessage.includes('Credenciales inválidas') ||
+      if (errorMessage.includes('no encontrado') || 
+          errorMessage.includes('no está almacenado') ||
+          errorMessage.includes('no registrada') ||
+          errorMessage.includes('404')) {
+        setError('Usuario no encontrado. El usuario no está almacenado en el sistema. Contacta a tu supervisor para crear una cuenta.');
+      } else if (errorMessage.includes('Credenciales inválidas') ||
           errorMessage.includes('401') ||
           errorMessage.includes('403')) {
-        setError('Credenciales inválidas o cuenta no registrada en el sistema. Contacta a tu supervisor para crear una cuenta.');
+        setError('Credenciales inválidas. Verifica tu correo y contraseña.');
       } else if (errorMessage.includes('Timeout') || errorMessage.includes('tiempo')) {
         setError('El servidor no respondió a tiempo. Verifica tu conexión e intenta nuevamente.');
       } else if (errorMessage.includes('conexión') || errorMessage.includes('Error de conexión')) {
