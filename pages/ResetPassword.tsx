@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { Lock, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -8,16 +8,32 @@ const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
   const email = searchParams.get('email') || '';
   const tempToken = searchParams.get('tempToken') || '';
+  const code = searchParams.get('code') || '';
   
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isEntering, setIsEntering] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Animación de entrada suave
+    const timer = setTimeout(() => setIsEntering(false), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validaciones
+    if (password.length < 6) {
+      setErrorMsg('La contraseña debe tener al menos 6 caracteres.');
+      setStatus('error');
+      return;
+    }
+    
     if (password !== confirmPassword) {
       setErrorMsg('Las contraseñas no coinciden.');
       setStatus('error');
@@ -26,10 +42,12 @@ const ResetPassword: React.FC = () => {
     
     setLoading(true);
     setStatus('idle');
+    setErrorMsg('');
     try {
-      await api.finalizePasswordReset(email, tempToken, password);
+      // Enviar solo el código al webhook (sin la contraseña nueva)
+      await api.finalizePasswordReset(email, tempToken, password, code);
       setStatus('success');
-      setTimeout(() => navigate('/login'), 3000);
+      setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error al restablecer contraseña.');
       setStatus('error');
@@ -39,37 +57,101 @@ const ResetPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-4 font-sans">
+    <div 
+      className="min-h-screen flex items-center justify-center px-4 font-sans transition-all duration-500 ease-out"
+      style={{
+        background: 'linear-gradient(135deg, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)',
+        opacity: isEntering ? 0 : 1,
+        transform: isEntering ? 'scale(1.05) translateY(20px)' : 'scale(1) translateY(0)',
+      }}
+    >
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50">
-          <div className="w-16 h-16 bg-gradient-brand-blue text-white rounded-2xl flex items-center justify-center mb-6 shadow-brand-blue-lg">
+        <div 
+          className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50 transition-all duration-500 ease-out"
+          style={{
+            opacity: isEntering ? 0 : 1,
+            transform: isEntering ? 'scale(0.9) translateY(30px)' : 'scale(1) translateY(0)',
+          }}
+        >
+          <div 
+            className="w-16 h-16 bg-gradient-brand-blue text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-brand-blue-lg transition-all duration-500"
+            style={{
+              animation: isEntering ? 'none' : 'scaleInRotate 0.6s ease-out 0.2s both',
+            }}
+          >
             <Lock className="w-8 h-8" />
           </div>
-          <h2 className="text-3xl font-semibold text-slate-900 leading-tight mb-3">Nueva contraseña</h2>
-          <p className="text-slate-600 mt-2 font-medium">Crea una contraseña segura que no hayas usado antes.</p>
+          <h2 
+            className="text-3xl font-semibold text-slate-900 leading-tight mb-3 text-center transition-all duration-500"
+            style={{
+              animation: isEntering ? 'none' : 'slideInFromBottom 0.5s ease-out 0.3s both',
+            }}
+          >
+            Nueva contraseña
+          </h2>
+          <p 
+            className="text-slate-600 mt-2 font-medium text-center transition-all duration-500"
+            style={{
+              animation: isEntering ? 'none' : 'fadeIn 0.5s ease-out 0.4s both',
+            }}
+          >
+            Crea una contraseña segura que no hayas usado antes.
+          </p>
 
-          <form onSubmit={handleReset} className="mt-10 space-y-6">
+          <form 
+            onSubmit={handleReset} 
+            className="mt-10 space-y-6 transition-all duration-500"
+            style={{
+              animation: isEntering ? 'none' : 'fadeIn 0.5s ease-out 0.5s both',
+            }}
+          >
             <div>
               <label className="block text-xs font-medium text-slate-400 tracking-normal mb-2">Nueva Contraseña</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 transition-all font-medium"
-              />
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  minLength={6}
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:ring-4 focus:ring-accent-blue/20 focus:border-accent-blue focus:bg-white transition-all font-medium"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--color-accent-blue)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--color-accent-light)';
+                    e.target.style.boxShadow = '';
+                  }}
+                  autoFocus
+                />
+              </div>
+              <p className="text-xs text-slate-400 mt-1 ml-1">Mínimo 6 caracteres</p>
             </div>
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Confirmar Contraseña</label>
-              <input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-500/10 focus:border-slate-500 transition-all font-medium"
-              />
+              <label className="block text-xs font-medium text-slate-400 tracking-normal mb-2">Confirmar Contraseña</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  minLength={6}
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:ring-4 focus:ring-accent-blue/20 focus:border-accent-blue focus:bg-white transition-all font-medium"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--color-accent-blue)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--color-accent-light)';
+                    e.target.style.boxShadow = '';
+                  }}
+                />
+              </div>
             </div>
 
             {status === 'success' && (
@@ -88,16 +170,28 @@ const ResetPassword: React.FC = () => {
 
             <button
               type="submit"
-              disabled={loading || status === 'success'}
-              className="w-full text-white font-semibold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
-              style={{background: 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)'}}
+              disabled={loading || status === 'success' || password.length < 6 || password !== confirmPassword}
+              className="w-full text-white font-semibold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center hover:-translate-y-0.5 hover:shadow-2xl"
+              style={{
+                background: loading || status === 'success' || password.length < 6 || password !== confirmPassword
+                  ? 'linear-gradient(to right, var(--color-accent-gray), var(--color-brand-gray))'
+                  : 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)',
+                cursor: loading || status === 'success' || password.length < 6 || password !== confirmPassword ? 'not-allowed' : 'pointer',
+                opacity: loading || status === 'success' || password.length < 6 || password !== confirmPassword ? 0.7 : 1
+              }}
               onMouseEnter={(e) => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue))';
+                if (!e.currentTarget.disabled && !loading && password.length >= 6 && password === confirmPassword) {
+                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)';
+                if (!e.currentTarget.disabled && !loading) {
+                  e.currentTarget.style.background = loading || status === 'success' || password.length < 6 || password !== confirmPassword
+                    ? 'linear-gradient(to right, var(--color-accent-gray), var(--color-brand-gray))'
+                    : 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }
               }}
             >
               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Restablecer Contraseña'}

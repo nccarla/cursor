@@ -28,3 +28,6 @@ Si la página no aparece:
 2. Revisa que el workflow se haya ejecutado correctamente en la pestaña "Actions"
 3. Espera unos minutos después del push para que se complete el despliegue
 4. Verifica que no haya errores en el build
+
+
+

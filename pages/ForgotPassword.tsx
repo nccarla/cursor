@@ -1,34 +1,76 @@
 
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { Mail, ArrowLeft, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 const ForgotPassword: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [searchParams] = useSearchParams();
+  const initialEmail = searchParams.get('email') || '';
+  const forceNew = searchParams.get('forceNew') === 'true';
+  const [email, setEmail] = useState(initialEmail);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isExiting, setIsExiting] = useState(false);
   const navigate = useNavigate();
+
+  // Actualizar email cuando cambie el parámetro de la URL
+  useEffect(() => {
+    const urlEmail = searchParams.get('email');
+    if (urlEmail) {
+      setEmail(urlEmail);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setStatus('idle');
+    setErrorMessage('');
     try {
-      await api.requestPasswordReset(email);
+      // Si viene con forceNew=true, forzar un nuevo código
+      await api.requestPasswordReset(email, forceNew);
+      
+      // El código se genera automáticamente en el servicio y se muestra solo en la consola
+      // No se muestra en pantalla por seguridad
+      
       setStatus('success');
-      setTimeout(() => navigate(`/verify-code?email=${encodeURIComponent(email)}`), 2000);
-    } catch (err) {
+      
+      // Animación de salida suave antes de navegar
+      setTimeout(() => {
+        setIsExiting(true);
+        // Esperar a que termine la animación de salida antes de navegar
+        setTimeout(() => {
+          navigate(`/verify-code?email=${encodeURIComponent(email)}`);
+        }, 400); // Duración de la animación de salida
+      }, 1500); // Mostrar mensaje de éxito por 1.5 segundos
+    } catch (err: any) {
       setStatus('error');
+      setErrorMessage(err.message || 'No pudimos procesar la solicitud. Intenta de nuevo.');
+      console.error('Error al solicitar código de recuperación:', err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{background: 'linear-gradient(135deg, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)'}}>
+    <div 
+      className="min-h-screen flex items-center justify-center px-4 transition-all duration-400 ease-in-out"
+      style={{
+        background: 'linear-gradient(135deg, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)',
+        opacity: isExiting ? 0 : 1,
+        transform: isExiting ? 'scale(0.95) translateY(-20px)' : 'scale(1) translateY(0)',
+      }}
+    >
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50 animate-in zoom-in-95 fade-in">
+        <div 
+          className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50 transition-all duration-400 ease-in-out"
+          style={{
+            opacity: isExiting ? 0 : 1,
+            transform: isExiting ? 'scale(0.95) translateY(-30px)' : 'scale(1) translateY(0)',
+          }}
+        >
           <Link 
             to="/login" 
             className="inline-flex items-center text-sm font-bold text-slate-500 hover:text-slate-700 mb-8 transition-colors px-3 py-2 rounded-xl hover:bg-slate-50 animate-in fade-in slide-in-from-left"
@@ -71,16 +113,47 @@ const ForgotPassword: React.FC = () => {
             </div>
 
             {status === 'success' && (
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 p-4 rounded-2xl flex items-center gap-3 border-2 border-green-200 animate-in fade-in duration-300 shadow-sm">
-                <CheckCircle2 className="w-5 h-5 shrink-0" style={{color: 'var(--color-accent-blue-2)'}} />
-                <p className="text-sm font-bold text-center flex-1">Código enviado. Redirigiendo...</p>
+              <div 
+                className="bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 p-4 rounded-2xl flex items-start gap-3 border-2 border-green-200 shadow-sm transition-all duration-300"
+                style={{
+                  animation: 'fadeInScale 0.4s ease-out',
+                }}
+              >
+                <CheckCircle2 
+                  className="w-5 h-5 shrink-0 mt-0.5 transition-transform duration-300" 
+                  style={{
+                    color: 'var(--color-accent-blue-2)',
+                    animation: 'scaleIn 0.3s ease-out 0.1s both',
+                  }}
+                />
+                <div className="flex-1">
+                  <p 
+                    className="text-sm font-bold mb-1 transition-all duration-300"
+                    style={{
+                      animation: 'slideInFromRight 0.4s ease-out 0.2s both',
+                    }}
+                  >
+                    Código enviado exitosamente
+                  </p>
+                  <p 
+                    className="text-xs text-green-600 transition-all duration-300"
+                    style={{
+                      animation: 'fadeIn 0.4s ease-out 0.3s both',
+                    }}
+                  >
+                    Si el correo está registrado, recibirás un código de recuperación. Revisa tu bandeja de entrada y spam.
+                  </p>
+                </div>
               </div>
             )}
 
             {status === 'error' && (
-              <div className="bg-gradient-to-r from-red-50 to-rose-50 text-red-700 p-4 rounded-2xl flex items-center gap-3 border-2 border-red-200 shadow-sm">
-                <AlertCircle className="w-5 h-5 shrink-0" style={{color: 'var(--color-brand-red)'}} />
-                <p className="text-sm font-bold">No pudimos procesar la solicitud. Intenta de nuevo.</p>
+              <div className="bg-gradient-to-r from-red-50 to-rose-50 text-red-700 p-4 rounded-2xl flex items-start gap-3 border-2 border-red-200 shadow-sm">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" style={{color: 'var(--color-brand-red)'}} />
+                <div className="flex-1">
+                  <p className="text-sm font-bold mb-1">{errorMessage || 'No pudimos procesar la solicitud. Intenta de nuevo.'}</p>
+                  <p className="text-xs text-red-600">Verifica que el correo esté registrado en el sistema. Si el problema persiste, contacta al administrador.</p>
+                </div>
               </div>
             )}
 

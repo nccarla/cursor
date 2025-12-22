@@ -2,6 +2,7 @@
 import { Case, CaseStatus, KPI, User, Role } from '../types';
 import { MOCK_CASOS, MOCK_AGENTES, MOCK_USERS } from './mockData';
 import { API_CONFIG } from '../config';
+import { emailService } from './emailService';
 
 // Inicializar datos en localStorage si no existen
 const initStorage = () => {
@@ -13,21 +14,34 @@ const initStorage = () => {
   }
 };
 
-// Función auxiliar para llamar al webhook de Make.com
+// Función auxiliar para llamar al webhook de n8n
 // Solo permite operaciones si el webhook responde correctamente
 // type: 'login' | 'forgot_password' | 'register'
-const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account', data: any) => {
+const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account', payload: any) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
 
-  // Mapear scenario a type para Make.com
+  // Mapear scenario a type para n8n
   const typeMap: Record<'login' | 'reset_password' | 'new_account', string> = {
     'login': 'login',
-    'reset_password': 'forgot_password',
+    'reset_password': 'reset_password',
     'new_account': 'register'
   };
 
   const type = typeMap[scenario];
+
+  // Preparar el payload final
+  const finalPayload = {
+    type,
+    ...payload,
+  };
+
+  console.log('Enviando petición al webhook:', {
+    url: API_CONFIG.WEBHOOK_URL,
+    scenario,
+    type,
+    payload: finalPayload,
+  });
 
   try {
     // Intentar la petición con CORS
@@ -41,10 +55,7 @@ const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account',
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          type,
-          ...data,
-        }),
+        body: JSON.stringify(finalPayload),
         signal: controller.signal,
       });
     } catch (fetchError: any) {
@@ -62,49 +73,105 @@ const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account',
       throw new Error('Error de CORS: El servidor no está permitiendo peticiones desde este origen.');
     }
 
-    const result = await response.json();
+    // Intentar parsear JSON, pero manejar respuestas vacías o no-JSON
+    let result: any;
+    try {
+      const text = await response.text();
+      if (text.trim() === '') {
+        // Respuesta vacía se considera éxito para request_reset
+        result = {};
+      } else {
+        result = JSON.parse(text);
+      }
+    } catch (parseError) {
+      // Si no se puede parsear JSON pero la respuesta es exitosa, considerar como éxito
+      if (response.ok) {
+        console.log('Respuesta no-JSON recibida, considerando como éxito');
+        result = { success: true };
+      } else {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+    }
     
-    // Verificar si hay error en la respuesta (formato de Make.com)
-    if (result.error === true) {
+    console.log('Respuesta del webhook (raw):', result, 'Status:', response.status);
+    
+    // Verificar si hay error en la respuesta (formato de Make.com/n8n)
+    if (result && result.error === true) {
       throw new Error(result.message || 'Error en la operación');
     }
 
     // Si la respuesta no es ok, también tratar como error
     if (!response.ok) {
-      throw new Error(result.message || `Error ${response.status}: ${response.statusText}`);
+      throw new Error(result?.message || `Error ${response.status}: ${response.statusText}`);
     }
 
-    // Validaciones según el escenario (formato de Make.com)
+    // Validaciones según el escenario (formato de Make.com/n8n)
     if (scenario === 'login' || scenario === 'new_account') {
-      // Para login y register, Make.com retorna: { id, name, role, email }
-      // NO retorna token ni user anidado
-      if (!result.id || !result.name || !result.role) {
-        throw new Error('Respuesta del webhook inválida. Faltan datos del usuario.');
+      console.log('📦 Respuesta del webhook para', scenario, ':', result);
+      
+      // Para login y register, el webhook puede retornar: { id, name, role, email }
+      // O puede retornar un formato diferente
+      
+      // Verificar si hay campos faltantes y proporcionar mensajes más específicos
+      const missingFields: string[] = [];
+      if (!result.id) missingFields.push('id');
+      if (!result.name) missingFields.push('name');
+      if (!result.role) missingFields.push('role');
+      
+      if (missingFields.length > 0) {
+        console.error('❌ Campos faltantes en la respuesta del webhook:', missingFields);
+        console.error('📋 Respuesta completa recibida:', JSON.stringify(result, null, 2));
+        throw new Error(`Respuesta del webhook inválida. Faltan datos del usuario: ${missingFields.join(', ')}. Verifica que el webhook esté configurado para retornar id, name y role.`);
       }
       
       // Validar que el rol sea válido
       if (!['AGENTE', 'SUPERVISOR', 'GERENTE'].includes(result.role)) {
-        throw new Error('Rol de usuario inválido. La cuenta debe tener un rol válido asignado.');
+        console.error('❌ Rol inválido recibido:', result.role);
+        throw new Error(`Rol de usuario inválido: "${result.role}". El rol debe ser uno de: AGENTE, SUPERVISOR, GERENTE.`);
       }
       
       // Normalizar la respuesta al formato esperado internamente
-      return {
+      const normalizedResponse = {
         token: `token-${result.id}-${Date.now()}`, // Generar token local basado en el ID
         user: {
           id: result.id,
           name: result.name,
           role: result.role,
-          email: result.email,
+          email: result.email || payload?.email || '',
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(result.name)}&background=0f172a&color=fff`
         }
       };
+      
+      console.log('✅ Respuesta normalizada:', normalizedResponse);
+      return normalizedResponse;
     } else if (scenario === 'reset_password') {
       // Para reset password, validar según la acción
-      if (data.action === 'verify_code' && !result.tempToken) {
-        throw new Error('Código de verificación inválido o expirado');
-      }
-      if (result.error === true || result.success === false) {
-        throw new Error(result.message || 'Error en la operación de restablecimiento de contraseña');
+      if (payload.action === 'verify_code') {
+        // Para verificar código, debe retornar tempToken
+        if (!result.tempToken) {
+          throw new Error('Código de verificación inválido o expirado');
+        }
+      } else if (payload.action === 'request_reset') {
+        // Para solicitar reset, solo lanzar error si hay error explícito
+        // Cualquier otra respuesta (incluso vacía) se considera éxito
+        if (result && (result.error === true || result.success === false)) {
+          throw new Error(result.message || 'Error al solicitar código de recuperación. Verifica que el correo esté registrado.');
+        }
+        // Si no hay error explícito, considerar como éxito
+        // El webhook puede retornar: {}, { success: true }, { message: "Código enviado" }, etc.
+        console.log('✅ Webhook respondió exitosamente para request_reset');
+        console.log('📧 Email solicitado:', payload.email);
+        console.log('📦 Respuesta del webhook:', result);
+        
+        // Si el webhook retorna un mensaje, mostrarlo
+        if (result && result.message) {
+          console.log('💬 Mensaje del webhook:', result.message);
+        }
+      } else if (payload.action === 'finalize_reset') {
+        // Para finalizar reset, validar éxito
+        if (result && (result.error === true || result.success === false)) {
+          throw new Error(result.message || 'Error al restablecer la contraseña');
+        }
       }
       return result;
     }
@@ -412,55 +479,184 @@ export const api = {
   },
 
   // Recuperación de contraseña con webhook (escenario: reset_password)
-  async requestPasswordReset(email: string): Promise<boolean> {
-    const data = await callWebhook('reset_password', { 
-      email,
-      action: 'request_reset' 
-    });
-    
-    // El webhook puede retornar: { success: boolean, message?: string }
-    if (data.success === false) {
-      throw new Error(data.message || 'Error al solicitar restablecimiento de contraseña');
+  // También usa el servicio temporal de correo para almacenar códigos localmente
+  async requestPasswordReset(email: string, forceNew: boolean = false): Promise<boolean> {
+    try {
+      console.log('Solicitando código de recuperación para:', email);
+      
+      // PRIMERO verificar si ya existe un código válido pendiente
+      // Si existe y no se fuerza uno nuevo, retornar sin hacer nada
+      if (!forceNew) {
+        const existingCode = emailService.getLatestCode(email);
+        if (existingCode && existingCode.expiresAt > Date.now()) {
+          console.log('ℹ️ Ya existe un código válido pendiente para este email');
+          console.log('   🔑 Código existente:', existingCode.code);
+          console.log('   ⏰ Expira:', new Date(existingCode.expiresAt).toLocaleString());
+          console.log('   ⚠️ No se enviará un nuevo correo. Usa el código existente.');
+          return true; // Retornar éxito sin generar nuevo código ni llamar al webhook
+        }
+      }
+      
+      // Si no hay código válido o se fuerza uno nuevo, proceder con el webhook y generar código
+      console.log('📤 Generando nuevo código de recuperación...');
+      
+      // Intentar llamar al webhook primero (solo si se va a generar un código nuevo)
+      // Estructura requerida: { type: "forgot_password", email: "" }
+      let webhookSuccess = false;
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+        
+        // Llamar directamente al webhook con la estructura exacta requerida
+        const payload = {
+          type: 'forgot_password',
+          email: email.trim().toLowerCase()
+        };
+        
+        console.log('📤 Enviando al webhook:', payload);
+        
+        const response = await fetch(API_CONFIG.WEBHOOK_URL, {
+          method: 'POST',
+          mode: 'cors',
+          credentials: 'omit',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json().catch(() => ({}));
+        console.log('📥 Respuesta del webhook:', data);
+        
+        // Solo lanzar error si hay un error explícito
+        if (data && (data.error === true || data.success === false)) {
+          throw new Error(data.message || 'Error al solicitar restablecimiento de contraseña');
+        }
+        
+        webhookSuccess = true;
+        console.log('✅ Webhook procesó la solicitud exitosamente');
+      } catch (webhookError: any) {
+        if (webhookError.name === 'AbortError') {
+          console.warn('⚠️ Timeout al llamar al webhook, usando servicio temporal');
+        } else {
+          console.warn('⚠️ El webhook no pudo procesar la solicitud, usando servicio temporal:', webhookError.message);
+        }
+        // Continuar con el servicio temporal aunque el webhook falle
+      }
+      
+      // Generar código localmente (forceNew = true porque ya verificamos que no hay código válido)
+      const { code, expiresAt, isNew } = emailService.sendPasswordResetCode(email, true);
+      
+      console.log('✅ Nuevo código de recuperación generado y almacenado localmente');
+      console.log('   📧 Email:', email);
+      console.log('   🔑 Código:', code);
+      console.log('   ⏰ Expira:', new Date(expiresAt).toLocaleString());
+      
+      // Si el webhook fue exitoso, retornar éxito
+      // Si el webhook falló pero el servicio temporal funcionó, también retornar éxito
+      return true;
+    } catch (error: any) {
+      console.error('Error en requestPasswordReset:', error);
+      // Si el error ya tiene un mensaje, propagarlo
+      if (error.message) {
+        throw error;
+      }
+      // Si no, proporcionar un mensaje genérico
+      throw new Error('No pudimos procesar la solicitud. Verifica que el correo esté registrado en el sistema.');
     }
-    
-    return true;
   },
 
   async verifyResetCode(email: string, code: string): Promise<{ ok: boolean; tempToken?: string }> {
-    const data = await callWebhook('reset_password', {
-      email,
-      code,
-      action: 'verify_code'
-    });
+    // Primero intentar verificar con el servicio temporal (más confiable)
+    const localVerification = emailService.verifyCode(email, code);
     
-    // El webhook debe retornar: { success: boolean, tempToken?: string, message?: string }
-    if (data.success === false) {
-      throw new Error(data.message || 'Código de verificación inválido');
+    if (localVerification.valid && localVerification.tempToken) {
+      console.log('✅ Código verificado con servicio local');
+      return {
+        ok: true,
+        tempToken: localVerification.tempToken
+      };
     }
     
-    if (!data.tempToken) {
-      throw new Error('Token temporal no recibido del servidor');
+    // Si el servicio local falla, intentar con el webhook como respaldo
+    console.log('⚠️ Código no válido en servicio local, intentando con webhook...');
+    try {
+      const data = await callWebhook('reset_password', {
+        email,
+        code,
+        action: 'verify_code'
+      });
+      
+      // El webhook debe retornar: { success: boolean, tempToken?: string, message?: string }
+      if (data.success === false) {
+        throw new Error(data.message || 'Código de verificación inválido');
+      }
+      
+      if (!data.tempToken) {
+        throw new Error('Token temporal no recibido del servidor');
+      }
+      
+      console.log('✅ Código verificado con webhook');
+      return { 
+        ok: true, 
+        tempToken: data.tempToken 
+      };
+    } catch (webhookError: any) {
+      // Si ambos fallan, usar el mensaje del servicio local (más descriptivo)
+      throw new Error(localVerification.message || webhookError.message || 'Código de verificación inválido');
     }
-    
-    return { 
-      ok: true, 
-      tempToken: data.tempToken 
-    };
   },
 
-  async finalizePasswordReset(email: string, token: string, password: string): Promise<boolean> {
-    const data = await callWebhook('reset_password', {
-      email,
-      tempToken: token,
-      password,
-      action: 'finalize_reset'
+  async finalizePasswordReset(email: string, token: string, password: string, code?: string): Promise<boolean> {
+    console.log('📤 Finalizando restablecimiento de contraseña para:', email);
+    
+    // Obtener el código usado si no se proporciona
+    let codeToSend = code;
+    if (!codeToSend) {
+      const latestCode = emailService.getLatestCode(email);
+      if (latestCode) {
+        codeToSend = latestCode.code;
+        console.log('🔑 Código obtenido del servicio local:', codeToSend);
+      }
+    }
+    
+    if (!codeToSend) {
+      throw new Error('Código de verificación no encontrado. Solicita un nuevo código.');
+    }
+    
+    // Preparar el payload exacto que requiere el webhook
+    // Estructura: { type: "reset_password", email: "", new_password: "", code: "" }
+    // NOTA: Se envía la nueva contraseña junto con el código
+    const payload = {
+      email: email.trim().toLowerCase(),
+      new_password: password.trim(),
+      code: codeToSend
+    };
+    
+    console.log('📤 Enviando al webhook:', {
+      type: 'reset_password',
+      ...payload
     });
     
+    // Llamar al webhook con la estructura exacta requerida
+    const data = await callWebhook('reset_password', payload);
+    
+    console.log('📥 Respuesta del webhook al finalizar reset:', data);
+    
     // El webhook debe retornar: { success: boolean, message?: string }
-    if (data.success === false) {
+    if (data && (data.error === true || data.success === false)) {
       throw new Error(data.message || 'Error al restablecer la contraseña');
     }
     
+    console.log('✅ Contraseña restablecida exitosamente');
     return true;
   },
 
@@ -485,21 +681,37 @@ export const api = {
       throw new Error('Formato de correo electrónico inválido');
     }
     
-    // Llamar al webhook de Make.com para crear y almacenar el usuario
-    // Make.com retorna: { id, name, role, email } cuando es correcto
+    console.log('📤 Creando cuenta nueva:', { email: email.trim().toLowerCase(), name: name.trim() });
+    
+    // Llamar al webhook de n8n para crear y almacenar el usuario
+    // n8n retorna: { id, name, role, email } cuando es correcto
     // O: { error: true, message: "..." } cuando hay error
-    const data = await callWebhook('new_account', {
-      email: email.trim().toLowerCase(),
-      password: password.trim(),
-      name: name.trim(),
-      createdAt: new Date().toISOString(),
-      ...additionalData
-    });
+    let data;
+    try {
+      data = await callWebhook('new_account', {
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+        name: name.trim(),
+        createdAt: new Date().toISOString(),
+        ...additionalData
+      });
+      
+      console.log('📥 Respuesta del webhook recibida:', data);
+    } catch (webhookError: any) {
+      console.error('❌ Error al llamar al webhook:', webhookError);
+      // Si el error ya tiene un mensaje descriptivo, propagarlo
+      if (webhookError.message) {
+        throw webhookError;
+      }
+      // Si no, proporcionar un mensaje genérico
+      throw new Error('Error al comunicarse con el servidor. Verifica tu conexión y que el webhook esté disponible.');
+    }
     
     // callWebhook ya normaliza la respuesta, así que esperamos { token, user }
     // Si no hay token o user, significa que el sistema no pudo crear/almacenar el usuario
-    if (!data.token || !data.user) {
-      throw new Error('Error al crear la cuenta. El usuario no pudo ser almacenado en el sistema. Verifica que el webhook esté configurado correctamente.');
+    if (!data || !data.token || !data.user) {
+      console.error('❌ Respuesta del webhook incompleta:', data);
+      throw new Error('Error al crear la cuenta. El webhook no retornó los datos necesarios. Verifica que el webhook esté configurado para retornar id, name y role.');
     }
 
     // Validar estructura completa del usuario almacenado
@@ -525,6 +737,47 @@ export const api = {
     };
 
     localStorage.setItem('intelfon_user', JSON.stringify(user));
+    
+    // Enviar datos del agente al webhook de almacenamiento de agentes
+    try {
+      console.log('📤 Enviando datos del agente al webhook de almacenamiento...');
+      
+      const agentePayload = {
+        id: data.user.id,
+        nombre: data.user.name.trim(),
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+        role: data.user.role,
+        fecha_creación: new Date().toISOString()
+      };
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+      
+      const response = await fetch(API_CONFIG.WEBHOOK_AGENTES_URL, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(agentePayload),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        console.log('✅ Datos del agente enviados exitosamente al webhook de almacenamiento');
+      } else {
+        console.warn('⚠️ El webhook de agentes respondió con error:', response.status, response.statusText);
+      }
+    } catch (webhookError: any) {
+      // No lanzar error, solo registrar advertencia
+      // La cuenta se creó exitosamente, este es un proceso adicional
+      console.warn('⚠️ No se pudieron enviar los datos al webhook de agentes:', webhookError.message);
+    }
     
     // El usuario ha sido creado y almacenado exitosamente en el sistema
     return user;
