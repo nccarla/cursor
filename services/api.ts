@@ -743,12 +743,10 @@ export const api = {
       console.log('📤 Enviando datos del agente al webhook de almacenamiento...');
       
       const agentePayload = {
-        id: data.user.id,
-        nombre: data.user.name.trim(),
+        nombre: name.trim(),
         email: email.trim().toLowerCase(),
         password: password.trim(),
-        role: data.user.role,
-        fecha_creación: new Date().toISOString()
+        role: 'AGENTE'
       };
       
       const controller = new AbortController();

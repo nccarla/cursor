@@ -73,30 +73,45 @@ const SupervisorPanel: React.FC = () => {
       <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, idx) => {
           const gradients = [
-            'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-            'linear-gradient(135deg, rgba(200, 21, 27, 0.1) 0%, rgba(245, 41, 56, 0.1) 100%)',
-            'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-            'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
+            'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            'linear-gradient(135deg, rgba(255, 247, 237, 0.8) 0%, rgba(254, 242, 242, 0.8) 100%)',
+            'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+            'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
           ];
           const textColors = ['text-slate-900', 'text-red-700', 'text-slate-900', 'text-slate-900'];
           const labelColors = ['text-slate-600', 'text-red-600', 'text-slate-600', 'text-slate-600'];
+          const borderColors = [
+            'rgba(16, 122, 180, 0.2)',
+            'rgba(200, 21, 27, 0.25)',
+            'rgba(64, 154, 187, 0.2)',
+            'rgba(123, 185, 203, 0.2)'
+          ];
           return (
             <div 
               key={idx} 
-              className="p-6 rounded-2xl border-2 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-between group hover:-translate-y-2 animate-in fade-in slide-in-from-bottom bg-white"
+              className="p-6 rounded-3xl border shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center justify-between group hover:-translate-y-1 animate-in fade-in slide-in-from-bottom bg-white"
               style={{ 
                 background: gradients[idx],
-                borderColor: idx === 1 ? 'rgba(200, 21, 27, 0.2)' : 'rgba(226, 232, 240, 0.5)',
+                borderColor: borderColors[idx],
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
                 animationDelay: `${idx * 100}ms` 
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 20px 40px -10px rgba(0, 0, 0, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = '';
+                e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1)';
               }}
             >
               <div className="flex-1">
-                <p className={`text-xs font-medium ${labelColors[idx]} tracking-normal mb-2`} style={{letterSpacing: '0'}}>{stat.label}</p>
-                <h3 className={`text-3xl font-semibold ${textColors[idx]} group-hover:scale-110 transition-transform duration-300`} style={{letterSpacing: '-0.02em', lineHeight: '1.3'}}>
+                <p className={`text-xs font-semibold ${labelColors[idx]} tracking-wide mb-3 uppercase`} style={{letterSpacing: '0.05em'}}>{stat.label}</p>
+                <h3 className={`text-3xl font-bold ${textColors[idx]} group-hover:scale-105 transition-transform duration-300`} style={{letterSpacing: '-0.03em', lineHeight: '1.2'}}>
                   {typeof stat.value === 'number' ? <AnimatedNumber value={stat.value} /> : stat.value}
                 </h3>
               </div>
-              <div className="p-4 rounded-xl group-hover:scale-125 group-hover:rotate-6 transition-all duration-300 shadow-lg animate-float" style={{backgroundColor: idx === 1 ? 'rgba(200, 21, 27, 0.15)' : 'rgba(26, 26, 26, 0.08)', animationDelay: `${idx * 200}ms`}}>
+              <div className="p-4 rounded-2xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg" style={{backgroundColor: stat.bg, animationDelay: `${idx * 200}ms`}}>
                 <stat.icon className="w-6 h-6" style={{color: stat.color}} />
               </div>
             </div>
@@ -144,11 +159,11 @@ const SupervisorPanel: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Critical Cases List - Ocupa 2 columnas */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl border-2 shadow-lg" style={{borderColor: 'rgba(200, 21, 27, 0.2)'}}>
-            <div className="flex justify-between items-center p-4 border-b-2" style={{background: 'linear-gradient(to right, rgba(200, 21, 27, 0.1), rgba(245, 41, 56, 0.1))', borderColor: 'rgba(200, 21, 27, 0.2)'}}>
-              <h3 className="text-xl font-semibold text-slate-900 flex items-center gap-3" style={{letterSpacing: '-0.01em', lineHeight: '1.4'}}>
-                <div className="p-2 bg-brand-red rounded-xl shadow-brand-red-lg">
-                  <AlertCircle className="w-5 h-5 text-white" />
+          <div className="bg-white rounded-3xl border shadow-xl" style={{borderColor: 'rgba(200, 21, 27, 0.25)', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'}}>
+            <div className="flex justify-between items-center p-5 border-b" style={{background: 'linear-gradient(to right, rgba(254, 242, 242, 0.6), rgba(255, 247, 237, 0.6))', borderColor: 'rgba(200, 21, 27, 0.2)'}}>
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3" style={{letterSpacing: '-0.02em'}}>
+                <div className="p-3 rounded-2xl shadow-lg" style={{backgroundColor: 'var(--color-brand-red)'}}>
+                  <AlertCircle className="w-6 h-6 text-white" />
                 </div>
                 Casos Críticos / Escalamientos
               </h3>
@@ -224,15 +239,16 @@ const SupervisorPanel: React.FC = () => {
         {/* Quick Agent Status - Ocupa 1 columna */}
         <div>
           <div 
-            className="rounded-2xl border-2 shadow-lg bg-white"
+            className="rounded-3xl border shadow-xl bg-white"
             style={{
-              borderColor: 'rgba(16, 122, 180, 0.2)'
+              borderColor: 'rgba(16, 122, 180, 0.2)',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
             }}
           >
-            <div className="p-4 border-b-2" style={{background: 'linear-gradient(to right, rgba(20, 84, 120, 0.1), rgba(16, 122, 180, 0.1))', borderColor: 'rgba(16, 122, 180, 0.2)'}}>
-              <h3 className="text-xl font-semibold text-slate-900 flex items-center gap-3" style={{letterSpacing: '-0.01em', lineHeight: '1.4'}}>
-                <div className="p-2 rounded-xl shadow-brand-blue-lg" style={{backgroundColor: 'var(--color-accent-blue)'}}>
-                  <Users className="w-5 h-5 text-white" />
+            <div className="p-5 border-b" style={{background: 'linear-gradient(to right, rgba(16, 122, 180, 0.08), rgba(64, 154, 187, 0.08))', borderColor: 'rgba(16, 122, 180, 0.2)'}}>
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3" style={{letterSpacing: '-0.02em'}}>
+                <div className="p-3 rounded-2xl shadow-lg" style={{backgroundColor: 'var(--color-accent-blue)'}}>
+                  <Users className="w-6 h-6 text-white" />
                 </div>
                 Rendimiento de Agentes
               </h3>
