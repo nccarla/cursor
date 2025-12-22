@@ -1,0 +1,420 @@
+:root {
+  /* COLORES PRIMARIOS */
+  --color-brand-red: #c8151b;
+  --color-brand-blue: #145478; /* Azul oscuro primario */
+  --color-brand-gray: #afacb2;
+
+  /* COLORES SECUNDARIOS */
+  --color-accent-red: #f52938;
+  --color-accent-darkred: #700306;
+  --color-accent-blue: #107ab4; /* Azul brillante */
+  --color-accent-blue-2: #409abb; /* Azul medio */
+  --color-accent-blue-3: #7bb9cb; /* Azul pastel claro */
+  --color-accent-gray: #989797;
+  --color-accent-light: #e4e4e4;
+  --color-accent-black: #000000;
+}
+
+/* Botón principal con colores de marca */
+.btn-brand {
+  background-color: var(--color-brand-red);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 12px 30px rgba(200, 21, 27, 0.25);
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-brand:hover {
+  background-color: var(--color-accent-red);
+  box-shadow: 0 14px 34px rgba(245, 41, 56, 0.28);
+  transform: translateY(-1px);
+}
+
+.btn-brand:focus-visible {
+  outline: 2px solid var(--color-accent-blue);
+  outline-offset: 3px;
+}
+
+.btn-brand:disabled {
+  background-color: var(--color-accent-gray);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Fondo hero con degradado de marca */
+.bg-brand-hero {
+  background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue-2));
+}
+
+/* Animaciones y transiciones mejoradas */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-from-top {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes zoom-in-95 {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-from-left {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-from-bottom {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 122, 180, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(16, 122, 180, 0);
+  }
+}
+
+.animate-in {
+  animation-duration: 300ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.slide-in-from-top {
+  animation-name: slide-in-from-top;
+}
+
+.slide-in-from-left {
+  animation-name: slide-in-from-left;
+}
+
+.slide-in-from-right {
+  animation-name: slide-in-from-right;
+}
+
+.slide-in-from-bottom {
+  animation-name: slide-in-from-bottom;
+}
+
+.zoom-in-95 {
+  animation-name: zoom-in-95;
+}
+
+.scale-in {
+  animation-name: scale-in;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Animaciones escalonadas */
+.animate-stagger-1 {
+  animation-delay: 0ms;
+}
+
+.animate-stagger-2 {
+  animation-delay: 100ms;
+}
+
+.animate-stagger-3 {
+  animation-delay: 200ms;
+}
+
+.animate-stagger-4 {
+  animation-delay: 300ms;
+}
+
+.animate-stagger-5 {
+  animation-delay: 400ms;
+}
+
+/* Efecto shimmer para carga */
+.shimmer {
+  background: linear-gradient(
+    to right,
+    #f6f7f8 0%,
+    #edeef1 20%,
+    #f6f7f8 40%,
+    #f6f7f8 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Mejoras de accesibilidad - Usando color de marca */
+*:focus-visible {
+  outline: 2px solid var(--color-accent-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Transiciones suaves para elementos interactivos */
+button, a, input, select, textarea {
+  transition: all 0.2s ease;
+}
+
+/* Mejora de contraste y legibilidad - Tipografía amigable y moderna */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  text-rendering: optimizeLegibility;
+  letter-spacing: 0;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* Tipografía amigable para títulos - Más cálida y legible */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Tipografía amigable para texto normal - Más espaciada y legible */
+p, span, div, label {
+  letter-spacing: 0;
+  line-height: 1.65;
+  font-weight: 400;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Inputs y placeholders con estilo amigable */
+input::placeholder, textarea::placeholder {
+  font-weight: 400;
+  letter-spacing: 0;
+  opacity: 0.65;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Botones con peso medio para mejor legibilidad */
+button {
+  font-weight: 500;
+  letter-spacing: 0;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.5;
+}
+
+/* Clases utilitarias con colores de marca Intelfon */
+.text-brand-red { color: var(--color-brand-red); }
+.text-brand-blue { color: var(--color-brand-blue); }
+.text-brand-gray { color: var(--color-brand-gray); }
+.text-accent-red { color: var(--color-accent-red); }
+.text-accent-blue { color: var(--color-accent-blue); }
+.text-accent-blue-2 { color: var(--color-accent-blue-2); }
+.text-accent-blue-3 { color: var(--color-accent-blue-3); }
+.text-accent-gray { color: var(--color-accent-gray); }
+
+.bg-brand-red { background-color: var(--color-brand-red); }
+.bg-brand-blue { background-color: var(--color-brand-blue); }
+.bg-brand-gray { background-color: var(--color-brand-gray); }
+.bg-accent-red { background-color: var(--color-accent-red); }
+.bg-accent-blue { background-color: var(--color-accent-blue); }
+.bg-accent-blue-2 { background-color: var(--color-accent-blue-2); }
+.bg-accent-blue-3 { background-color: var(--color-accent-blue-3); }
+.bg-accent-gray { background-color: var(--color-accent-gray); }
+.bg-accent-light { background-color: var(--color-accent-light); }
+.bg-accent-darkred { background-color: var(--color-accent-darkred); }
+
+.border-brand-red { border-color: var(--color-brand-red); }
+.border-brand-blue { border-color: var(--color-brand-blue); }
+.border-accent-red { border-color: var(--color-accent-red); }
+.border-accent-blue { border-color: var(--color-accent-blue); }
+.border-accent-blue-2 { border-color: var(--color-accent-blue-2); }
+
+/* Gradientes de marca */
+.bg-gradient-brand-blue {
+  background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue));
+}
+
+.bg-gradient-brand-red {
+  background: linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red));
+}
+
+.bg-gradient-brand-hero {
+  background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue), var(--color-accent-blue-2));
+}
+
+/* Fondos con opacidad para usar con colores de marca */
+.bg-brand-red\/10 { background-color: rgba(200, 21, 27, 0.1); }
+.bg-brand-red\/20 { background-color: rgba(200, 21, 27, 0.2); }
+.bg-brand-blue\/10 { background-color: rgba(26, 26, 26, 0.1); }
+.bg-brand-blue\/20 { background-color: rgba(26, 26, 26, 0.2); }
+.bg-accent-red\/10 { background-color: rgba(245, 41, 56, 0.1); }
+.bg-accent-red\/20 { background-color: rgba(245, 41, 56, 0.2); }
+.bg-accent-blue\/10 { background-color: rgba(45, 45, 45, 0.1); }
+.bg-accent-blue\/20 { background-color: rgba(45, 45, 45, 0.2); }
+
+/* Sombras con colores de marca */
+.shadow-brand-red {
+  box-shadow: 0 4px 6px -1px rgba(200, 21, 27, 0.1), 0 2px 4px -1px rgba(200, 21, 27, 0.06);
+}
+
+.shadow-brand-blue {
+  box-shadow: 0 4px 6px -1px rgba(20, 84, 120, 0.1), 0 2px 4px -1px rgba(20, 84, 120, 0.06);
+}
+
+.shadow-brand-red-lg {
+  box-shadow: 0 10px 15px -3px rgba(200, 21, 27, 0.1), 0 4px 6px -2px rgba(200, 21, 27, 0.05);
+}
+
+.shadow-brand-blue-lg {
+  box-shadow: 0 10px 15px -3px rgba(26, 26, 26, 0.1), 0 4px 6px -2px rgba(26, 26, 26, 0.05);
+}
+
+/* Actualizar focus-visible con color de marca */
+*:focus-visible {
+  outline: 2px solid var(--color-accent-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Scrollbar con colores de marca */
+::-webkit-scrollbar-thumb {
+  background: var(--color-accent-gray);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-gray);
+}
+
+/* Clases para inputs con colores de marca */
+.input-brand {
+  background-color: var(--color-accent-light);
+  border-color: var(--color-accent-light);
+}
+
+.input-brand:focus {
+  border-color: var(--color-accent-blue);
+  box-shadow: 0 0 0 2px rgba(16, 122, 180, 0.2);
+  background-color: white;
+}
+
+/* Botones con gradiente de marca azul */
+.btn-brand-blue {
+  background: linear-gradient(to right, var(--color-brand-blue), var(--color-accent-blue));
+  color: white;
+}
+
+.btn-brand-blue:hover {
+  background: linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2));
+}
+
+/* Hover para filas de tabla */
+.table-row-hover:hover {
+  background-color: rgba(16, 122, 180, 0.05);
+  border-left-color: var(--color-accent-blue);
+}
+
+/* Texto hover azul */
+.text-hover-blue:hover {
+  color: var(--color-accent-blue);
+}
+
+
+

@@ -1,0 +1,12 @@
+# Carpeta de Assets Públicos
+
+Esta carpeta contiene archivos estáticos que son accesibles públicamente sin autenticación.
+Los archivos en esta carpeta se sirven desde la raíz del sitio y son accesibles para todos los usuarios.
+
+Ejemplos de assets públicos:
+- Imágenes públicas
+- Iconos
+- Archivos de documentación pública
+- Favicons
+- Otros recursos estáticos que no requieren autenticación
+
