@@ -1,7 +1,7 @@
 
-import { Case, CaseStatus, KPI, User, Role } from '../types';
-import { MOCK_CASOS, MOCK_AGENTES, MOCK_USERS } from './mockData';
-import { API_CONFIG } from '../config';
+import { Case, CaseStatus, KPI, User, Role, Cliente, Categoria } from '../types';
+import { MOCK_CASOS, MOCK_AGENTES, MOCK_USERS, MOCK_CLIENTES, MOCK_CATEGORIAS } from './mockData';
+import { API_CONFIG, CASES_WEBHOOK_URL } from '../config';
 
 // Inicializar datos en localStorage si no existen
 const initStorage = () => {
@@ -12,6 +12,96 @@ const initStorage = () => {
     localStorage.setItem('intelfon_agents', JSON.stringify(MOCK_AGENTES));
   }
 };
+
+// Helper para llamadas al webhook de casos en n8n
+// Usa el JWT almacenado (cuando exista) y respeta el timeout global
+const callCasesWebhook = async <T = any>(
+  method: 'GET' | 'POST',
+  body?: unknown
+): Promise<T> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+  const token = localStorage.getItem('intelfon_token');
+
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+  };
+
+  if (body) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(CASES_WEBHOOK_URL, {
+      method,
+      mode: 'cors',
+      credentials: 'omit',
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      // Intentar extraer mensaje de error del backend
+      let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      try {
+        const errorBody = await response.json();
+        if (errorBody?.message) {
+          errorMessage = errorBody.message;
+        }
+      } catch {
+        // ignorar error de parseo
+      }
+      throw new Error(errorMessage);
+    }
+
+    // Algunos flujos podrían responder 204 sin cuerpo
+    if (response.status === 204) {
+      return undefined as unknown as T;
+    }
+
+    const data = (await response.json()) as T;
+    return data;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('Timeout al comunicarse con el backend de casos (n8n).');
+    }
+    // Re-lanzamos para que la capa superior pueda hacer fallback a mock/localStorage
+    throw error;
+  }
+};
+
+// Helpers para construir el payload estándar esperado por n8n
+const buildActorPayload = (user: User | null) => {
+  if (!user) {
+    return {
+      user_id: 0,
+      email: 'demo@intelfon.com',
+      role: 'AGENTE',
+    };
+  }
+
+  const numericId = Number((user as any).user_id ?? user.id);
+
+  return {
+    user_id: Number.isNaN(numericId) ? 0 : numericId,
+    email: (user as any).email || 'demo@intelfon.com',
+    role: user.role,
+  };
+};
+
+const DEFAULT_CATEGORY = {
+  categoria_id: 7, // "Otros" - categoría por defecto para casos sin categoría específica
+  nombre: 'Otros',
+};
+
 
 // Función auxiliar para llamar al webhook de Make.com
 // Solo permite operaciones si el webhook responde correctamente
@@ -278,10 +368,12 @@ export const api = {
   },
 
   async getCases(): Promise<Case[]> {
+    // Por ahora el listado de casos se hace solo desde localStorage / mocks.
+    // n8n se utiliza únicamente para CREATE / UPDATE hasta que se defina el contrato de lectura.
     initStorage();
     const data = localStorage.getItem('intelfon_cases');
     const cases = data ? JSON.parse(data) : [];
-    
+
     // Si es agente, solo ve sus casos
     const user = this.getUser();
     if (user?.role === 'AGENTE') {
@@ -301,6 +393,31 @@ export const api = {
   },
 
   async updateCaseStatus(id: string, status: string, detail: string, extra?: any): Promise<boolean> {
+    const user = this.getUser();
+
+    // 1) Notificar cambio de estado a n8n usando el contrato CRUD.UPDATE
+    try {
+      await callCasesWebhook('POST', {
+        CRUD: {
+          UPDATE: {
+            action: 'case.update',
+            actor: buildActorPayload(user),
+            data: {
+              case_id: id,
+              patch: {
+                estado: status,
+                descripcion: detail || `Cambio de estado a ${status}`,
+                ...(extra?.resolucion ? { resolucion: extra.resolucion } : {}),
+              },
+            },
+          },
+        },
+      });
+    } catch (err) {
+      console.warn('Error al actualizar caso en n8n, aplicando cambio solo en local.', err);
+    }
+
+    // 2) Actualizar también el estado en localStorage como fallback
     const cases = await this.getCases();
     const idx = cases.findIndex((c: any) => (c.id === id || c.idCaso === id || c.ticketNumber === id));
     
@@ -324,6 +441,53 @@ export const api = {
   },
 
   async createCase(caseData: any): Promise<boolean> {
+    const user = this.getUser();
+
+    console.log('[api.createCase] Enviando nuevo caso', caseData, user);
+
+    // Buscar la categoría seleccionada
+    const categoriaSeleccionada = caseData.categoriaId 
+      ? MOCK_CATEGORIAS.find(cat => cat.idCategoria === caseData.categoriaId)
+      : null;
+
+    // Determinar categoria_id y nombre para el JSON
+    const categoriaId = categoriaSeleccionada 
+      ? (typeof categoriaSeleccionada.idCategoria === 'string' ? parseInt(categoriaSeleccionada.idCategoria) || 1 : categoriaSeleccionada.idCategoria)
+      : DEFAULT_CATEGORY.categoria_id;
+    const categoriaNombre = categoriaSeleccionada?.nombre || DEFAULT_CATEGORY.nombre;
+
+    // 1) Intentar crear el caso en el backend n8n usando el contrato CRUD.CREATE (no bloquea la creación local)
+    try {
+      await callCasesWebhook('POST', {
+        CRUD: {
+          CREATE: {
+            action: 'case.create',
+            actor: buildActorPayload(user),
+            data: {
+              cliente: {
+                cliente_id: caseData.clienteId || `CL-${Date.now()}`,
+                nombre_empresa: caseData.clientName,
+                contacto_principal: caseData.contactName || caseData.clientName,
+                email: caseData.clientEmail,
+                telefono: caseData.phone || '',
+              },
+              categoria: {
+                categoria_id: categoriaId,
+                nombre: categoriaNombre,
+              },
+              canal_origen: caseData.contactChannel || caseData.canalOrigen || 'Web',
+              canal_notificacion: 'Email',
+              asunto: caseData.subject,
+              descripcion: caseData.description,
+            },
+          },
+        },
+      });
+    } catch (err) {
+      console.warn('Error al crear caso en n8n, usando modo local como fallback.', err);
+    }
+
+    // 2) Crear siempre el caso en local (modo demo / sin backend disponible)
     const cases = await this.getCases();
     const newId = `CASO-${Math.floor(1000 + Math.random() * 9000)}`;
     const newEntry = {
@@ -336,11 +500,13 @@ export const api = {
       agentName: MOCK_AGENTES[0].nombre,
       categoria: { nombre: 'General', slaDias: 2 },
       category: 'General',
+      canalOrigen: caseData.contactChannel || caseData.canalOrigen || 'Web',
+      origin: caseData.contactChannel || caseData.canalOrigen || 'Web',
       diasAbierto: 0,
       createdAt: new Date().toISOString(),
       historial: [{
         fechaHora: new Date().toISOString(),
-        detalle: 'Caso creado manualmente en sistema',
+        detalle: 'Caso creado manualmente en sistema (local fallback)',
         usuario: this.getUser()?.name || 'Sistema'
       }]
     };
@@ -392,6 +558,27 @@ export const api = {
     initStorage();
     const data = localStorage.getItem('intelfon_agents');
     return data ? JSON.parse(data) : MOCK_AGENTES;
+  },
+
+  // Obtener lista de clientes (por ahora mock, luego se conectará con n8n)
+  async getClientes(): Promise<Cliente[]> {
+    // TODO: Cuando esté listo el flujo de n8n, aquí se hará POST al webhook con action: "client.list"
+    // Por ahora retornamos datos mock
+    return MOCK_CLIENTES;
+  },
+
+  // Obtener cliente por ID (para autocompletar campos)
+  async getClienteById(clienteId: string): Promise<Cliente | undefined> {
+    // TODO: Cuando esté listo el flujo de n8n, aquí se hará POST al webhook con action: "client.read" y cliente_id
+    // Por ahora buscamos en mock
+    return MOCK_CLIENTES.find(c => c.idCliente === clienteId);
+  },
+
+  // Obtener lista de categorías (por ahora mock, luego se conectará con n8n)
+  async getCategorias(): Promise<Categoria[]> {
+    // TODO: Cuando esté listo el flujo de n8n, aquí se hará POST al webhook con action: "category.list"
+    // Por ahora retornamos datos mock
+    return MOCK_CATEGORIAS.filter(cat => cat.activa);
   },
 
   async updateAgente(id: string, data: any): Promise<boolean> {

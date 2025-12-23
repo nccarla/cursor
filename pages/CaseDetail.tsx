@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Case, CaseStatus } from '../types';
 import { STATE_TRANSITIONS, STATE_COLORS } from '../constants';
-import { ArrowLeft, MessageSquare, History, User, Building2, Phone, Mail, Send, CheckCircle2, AlertTriangle, Clock, X } from 'lucide-react';
+import { ArrowLeft, MessageSquare, User, Building2, Phone, Mail, CheckCircle2, Clock, X, AlertTriangle, Lock } from 'lucide-react';
 
 const CaseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +14,8 @@ const CaseDetail: React.FC = () => {
   
   const [showResueltoModal, setShowResueltoModal] = useState(false);
   const [showPendienteModal, setShowPendienteModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ state: CaseStatus; label: string } | null>(null);
   const [formDetail, setFormDetail] = useState('');
 
   useEffect(() => {
@@ -25,19 +27,62 @@ const CaseDetail: React.FC = () => {
     if (data) setCaso(data);
   };
 
+  // Validar si el caso está cerrado
+  const isCaseClosed = caso?.status === CaseStatus.CERRADO;
+
+  // Validar si se puede realizar una acción
+  const canPerformAction = !isCaseClosed && !transitionLoading;
+
   const handleStateChange = async (newState: string, extraData?: any) => {
     if (!caso) return;
+    
+    // Validación: no permitir acciones en casos cerrados
+    if (isCaseClosed) {
+      alert('No se pueden realizar acciones en un caso cerrado.');
+      return;
+    }
+
     setTransitionLoading(true);
     try {
       await api.updateCaseStatus(caso.id, newState, `Transición a ${newState}`, extraData);
       setShowResueltoModal(false);
       setShowPendienteModal(false);
+      setShowConfirmModal(false);
+      setPendingAction(null);
       setFormDetail('');
       await loadCaso(caso.id);
     } catch (err) {
       alert('Error al actualizar el estado del caso.');
     } finally {
       setTransitionLoading(false);
+    }
+  };
+
+  const handleActionClick = (newState: CaseStatus) => {
+    // Validación: no permitir acciones en casos cerrados
+    if (isCaseClosed) {
+      return;
+    }
+
+    // Estados que requieren modal especial
+    if (newState === CaseStatus.RESUELTO) {
+      setShowResueltoModal(true);
+      return;
+    }
+    
+    if (newState === CaseStatus.PENDIENTE_CLIENTE) {
+      setShowPendienteModal(true);
+      return;
+    }
+
+    // Para otros estados, mostrar modal de confirmación genérico
+    setPendingAction({ state: newState, label: newState });
+    setShowConfirmModal(true);
+  };
+
+  const confirmAction = () => {
+    if (pendingAction) {
+      handleStateChange(pendingAction.state);
     }
   };
 
@@ -94,66 +139,54 @@ const CaseDetail: React.FC = () => {
 
             <div className="p-8 border-t-2 border-slate-100 bg-gradient-to-r from-slate-50/30 to-slate-100/30">
                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
-                 <CheckCircle2 className="w-5 h-5" style={{color: 'var(--color-accent-blue)'}} /> Acciones Disponibles
-               </h3>
-               <div className="flex flex-wrap gap-3">
-                 {validTransitions.length > 0 ? (
-                   validTransitions.map(st => {
-                     const onClick = () => {
-                        if (st === CaseStatus.RESUELTO) setShowResueltoModal(true);
-                        else if (st === CaseStatus.PENDIENTE_CLIENTE) setShowPendienteModal(true);
-                        else handleStateChange(st);
-                     };
-                     
-                     return (
-                        <button
-                          key={st}
-                          disabled={transitionLoading}
-                          onClick={onClick}
-                          className="px-6 py-3 rounded-xl bg-gradient-brand-blue text-white text-xs font-semibold tracking-normal transition-all disabled:opacity-50 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                          style={{background: 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))'}}
-                          onMouseEnter={(e) => {
-                            if (!e.currentTarget.disabled) {
-                              e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue), var(--color-accent-blue))';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
-                          }}
-                        >
-                          {st}
-                        </button>
-                     );
-                   })
+                 {isCaseClosed ? (
+                   <>
+                     <Lock className="w-5 h-5 text-slate-400" /> Acciones Bloqueadas
+                   </>
                  ) : (
-                   <div className="w-full p-4 bg-slate-100 rounded-xl border border-slate-200">
-                     <p className="text-slate-500 text-sm font-medium text-center">Caso en estado final ({caso.status}).</p>
-                   </div>
+                   <>
+                     <CheckCircle2 className="w-5 h-5" style={{color: 'var(--color-accent-blue)'}} /> Acciones Disponibles
+                   </>
                  )}
-               </div>
-            </div>
-          </section>
-
-          <section className="bg-white rounded-2xl shadow-sm border-2 border-slate-200/50 p-8">
-            <h3 className="text-xl font-semibold text-slate-900 mb-8 flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">
-                <History className="w-5 h-5" style={{color: 'var(--color-accent-blue)'}} />
-              </div>
-              Línea de Tiempo
-            </h3>
-            <div className="space-y-6 relative before:absolute before:left-[19px] before:top-3 before:bottom-3 before:w-1 before:bg-gradient-to-b before:from-slate-300 before:to-slate-200 before:rounded-full">
-              {caso.history?.map((entry, idx) => (
-                <div key={idx} className="relative pl-12">
-                  <div className="absolute left-0 top-2 w-10 h-10 rounded-xl bg-gradient-brand-blue border-4 border-white flex items-center justify-center shadow-brand-blue-lg">
-                    <CheckCircle2 className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="bg-white rounded-2xl border-2 border-slate-200 p-5 shadow-sm hover:shadow-md transition-all hover:border-slate-300">
-                    <p className="text-xs text-slate-500 font-medium mb-2 tracking-normal">{new Date(entry.fechaHora).toLocaleString()}</p>
-                    <p className="text-sm text-slate-800 font-semibold leading-relaxed mb-2">{entry.detalle}</p>
-                    <p className="text-xs font-medium tracking-normal" style={{color: 'var(--color-accent-blue)'}}>Por: {entry.usuario}</p>
-                  </div>
-                </div>
-              ))}
+               </h3>
+               
+               {isCaseClosed ? (
+                 <div className="w-full p-6 bg-gradient-to-r from-slate-100 to-slate-200 rounded-xl border-2 border-slate-300">
+                   <div className="flex items-center gap-3 mb-2">
+                     <Lock className="w-6 h-6 text-slate-500" />
+                     <p className="text-slate-700 text-sm font-bold">Caso Cerrado</p>
+                   </div>
+                   <p className="text-slate-600 text-sm font-medium ml-9">
+                     Este caso ha sido cerrado y no se pueden realizar más acciones sobre él.
+                   </p>
+                 </div>
+               ) : validTransitions.length > 0 ? (
+                 <div className="flex flex-wrap gap-3">
+                   {validTransitions.map(st => (
+                     <button
+                       key={st}
+                       disabled={transitionLoading || !canPerformAction}
+                       onClick={() => handleActionClick(st)}
+                       className="px-6 py-3 rounded-xl bg-gradient-brand-blue text-white text-xs font-semibold tracking-normal transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:-translate-y-0.5 disabled:hover:translate-y-0"
+                       style={{background: 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))'}}
+                       onMouseEnter={(e) => {
+                         if (!e.currentTarget.disabled) {
+                           e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue), var(--color-accent-blue))';
+                         }
+                       }}
+                       onMouseLeave={(e) => {
+                         e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                       }}
+                     >
+                       {st}
+                     </button>
+                   ))}
+                 </div>
+               ) : (
+                 <div className="w-full p-4 bg-slate-100 rounded-xl border border-slate-200">
+                   <p className="text-slate-500 text-sm font-medium text-center">No hay acciones disponibles para este estado ({caso.status}).</p>
+                 </div>
+               )}
             </div>
           </section>
         </div>
@@ -192,32 +225,104 @@ const CaseDetail: React.FC = () => {
         </div>
       </div>
 
+      {/* Modal de Confirmación Genérico */}
+      {showConfirmModal && pendingAction && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200/50 transform animate-in zoom-in-95 duration-200">
+            <div className="p-6 text-white flex justify-between items-center" style={{background: 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue-3))'}}>
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6" />
+                <h3 className="font-semibold text-lg">Confirmar Acción</h3>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  setPendingAction(null);
+                }}
+                className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6"/>
+              </button>
+            </div>
+            <div className="p-8 space-y-5">
+              <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+                <p className="text-slate-800 font-semibold text-sm mb-2">¿Estás seguro de cambiar el estado del caso?</p>
+                <p className="text-slate-600 text-sm">
+                  El caso pasará de <span className="font-bold">{caso.status}</span> a <span className="font-bold">{pendingAction.label}</span>.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setPendingAction(null);
+                  }}
+                  className="flex-1 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all border border-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={confirmAction}
+                  disabled={transitionLoading}
+                  className="flex-1 py-3.5 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50"
+                  style={{background: 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue-3))'}}
+                  onMouseEnter={(e) => {
+                    if (!e.currentTarget.disabled) {
+                      e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue-3))';
+                  }}
+                >
+                  {transitionLoading ? 'Procesando...' : 'Confirmar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Resolución */}
       {showResueltoModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200/50 transform animate-in zoom-in-95 duration-200">
                 <div className="p-6 text-white flex justify-between items-center" style={{background: 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue-3))'}}>
                     <h3 className="font-semibold text-lg">Registrar Resolución</h3>
                     <button 
-                      onClick={() => setShowResueltoModal(false)}
+                      onClick={() => {
+                        setShowResueltoModal(false);
+                        setFormDetail('');
+                      }}
                       className="p-1 hover:bg-white/20 rounded-lg transition-colors"
                     >
                       <X className="w-6 h-6"/>
                     </button>
                 </div>
                 <div className="p-8 space-y-5">
+                    <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                      <p className="text-slate-700 text-sm font-medium">
+                        Para marcar el caso como <span className="font-bold">Resuelto</span>, debes describir la solución implementada.
+                      </p>
+                    </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Solución Brindada</label>
+                      <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Solución Brindada <span className="text-red-500">*</span></label>
                       <textarea 
                           className="w-full h-32 p-4 rounded-xl border-2 border-slate-200 outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-slate-50 focus:bg-white font-medium resize-none"
                           placeholder="Describe la solución implementada..."
                           value={formDetail}
                           onChange={e => setFormDetail(e.target.value)}
+                          required
                       ></textarea>
                     </div>
                     <div className="flex gap-3">
                       <button 
                         type="button"
-                        onClick={() => setShowResueltoModal(false)}
+                        onClick={() => {
+                          setShowResueltoModal(false);
+                          setFormDetail('');
+                        }}
                         className="flex-1 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all border border-slate-200"
                       >
                         Cancelar
@@ -237,6 +342,70 @@ const CaseDetail: React.FC = () => {
                         }}
                       >
                         {transitionLoading ? 'Procesando...' : 'Confirmar Resolución'}
+                      </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Modal de Pendiente Cliente */}
+      {showPendienteModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200/50 transform animate-in zoom-in-95 duration-200">
+                <div className="p-6 text-white flex justify-between items-center" style={{background: 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue-3))'}}>
+                    <h3 className="font-semibold text-lg">Marcar como Pendiente Cliente</h3>
+                    <button 
+                      onClick={() => {
+                        setShowPendienteModal(false);
+                        setFormDetail('');
+                      }}
+                      className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                    >
+                      <X className="w-6 h-6"/>
+                    </button>
+                </div>
+                <div className="p-8 space-y-5">
+                    <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4">
+                      <p className="text-slate-700 text-sm font-medium">
+                        El caso quedará en espera de respuesta del cliente. Puedes agregar un mensaje opcional.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Mensaje (Opcional)</label>
+                      <textarea 
+                          className="w-full h-32 p-4 rounded-xl border-2 border-slate-200 outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all bg-slate-50 focus:bg-white font-medium resize-none"
+                          placeholder="Detalle sobre qué se espera del cliente..."
+                          value={formDetail}
+                          onChange={e => setFormDetail(e.target.value)}
+                      ></textarea>
+                    </div>
+                    <div className="flex gap-3">
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setShowPendienteModal(false);
+                          setFormDetail('');
+                        }}
+                        className="flex-1 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all border border-slate-200"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        onClick={() => handleStateChange(CaseStatus.PENDIENTE_CLIENTE, { detalle: formDetail || 'Caso marcado como pendiente de respuesta del cliente' })}
+                        disabled={transitionLoading}
+                        className="flex-1 py-3.5 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50"
+                        style={{background: 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue-3))'}}
+                        onMouseEnter={(e) => {
+                          if (!e.currentTarget.disabled) {
+                            e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue-3))';
+                        }}
+                      >
+                        {transitionLoading ? 'Procesando...' : 'Confirmar'}
                       </button>
                     </div>
                 </div>

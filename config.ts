@@ -1,8 +1,8 @@
 // Configuración de la API y Webhooks
 export const API_CONFIG = {
   // URL del webhook de n8n para autenticación y gestión de usuarios
-  // Usa la URL directa siempre - el servidor n8n debe permitir CORS
-  WEBHOOK_URL: import.meta.env.VITE_WEBHOOK_URL || 'https://n8n.red.com.sv/webhook/6f27bb4b-bfcd-4776-b554-5194569be2a7',
+  // En desarrollo se recomienda usar el proxy de Vite configurado en vite.config.ts
+  WEBHOOK_URL: import.meta.env.VITE_WEBHOOK_URL || '/api/webhook/auth',
   
   // Timeout para las peticiones (en milisegundos)
   TIMEOUT: 30000, // Aumentado a 30 segundos para dar más tiempo
@@ -10,4 +10,10 @@ export const API_CONFIG = {
   // Modo demo: deshabilitado - solo se permite acceso con webhook
   DEMO_MODE_FALLBACK: false,
 };
+
+// Webhook específico para gestión de CASOS (listado/creación) en n8n
+// En desarrollo apunta a un endpoint relativo que pasa por el proxy de Vite
+// En producción puedes sobreescribirlo con la URL completa del webhook de n8n
+export const CASES_WEBHOOK_URL =
+  import.meta.env.VITE_CASES_WEBHOOK_URL || '/api/casos';
 

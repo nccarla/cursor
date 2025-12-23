@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { Case, CaseStatus } from '../types';
+import { Case, CaseStatus, Cliente, Categoria, Channel } from '../types';
 import { STATE_COLORS } from '../constants';
 import { Search, Plus, Filter, ChevronRight, X } from 'lucide-react';
 
@@ -12,11 +12,18 @@ const BandejaCasos: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   
   const [newCase, setNewCase] = useState({
+    clienteId: '',
+    categoriaId: '',
+    contactChannel: Channel.WEB,
     subject: '',
     description: '',
     clientName: '',
+    contactName: '',
+    phone: '',
     email: '',
   });
 
@@ -24,7 +31,48 @@ const BandejaCasos: React.FC = () => {
 
   useEffect(() => {
     loadCasos();
+    loadClientes();
+    loadCategorias();
   }, []);
+
+  const loadClientes = async () => {
+    const data = await api.getClientes();
+    setClientes(data);
+  };
+
+  const loadCategorias = async () => {
+    const data = await api.getCategorias();
+    setCategorias(data);
+  };
+
+  const handleClienteChange = async (clienteId: string) => {
+    if (!clienteId) {
+      // Si se limpia el selector, limpiar campos relacionados
+      setNewCase({
+        ...newCase,
+        clienteId: '',
+        clientName: '',
+        contactName: '',
+        phone: '',
+        email: '',
+        contactChannel: Channel.WEB,
+      });
+      return;
+    }
+
+    // Buscar cliente y autocompletar campos
+    const cliente = await api.getClienteById(clienteId);
+    if (cliente) {
+      setNewCase({
+        ...newCase,
+        clienteId: cliente.idCliente,
+        clientName: cliente.nombreEmpresa,
+        contactName: cliente.contactoPrincipal,
+        phone: cliente.telefono,
+        email: cliente.email,
+      });
+    }
+  };
 
   const loadCasos = async () => {
     const data = await api.getCases();
@@ -52,15 +100,20 @@ const BandejaCasos: React.FC = () => {
     e.preventDefault();
     try {
       await api.createCase({
+        clienteId: newCase.clienteId,
+        categoriaId: newCase.categoriaId,
+        contactChannel: newCase.contactChannel,
         subject: newCase.subject,
         description: newCase.description,
         clientName: newCase.clientName,
+        contactName: newCase.contactName,
+        phone: newCase.phone,
         clientEmail: newCase.email,
         status: CaseStatus.NUEVO,
         createdAt: new Date().toISOString(),
       });
       setShowModal(false);
-      setNewCase({ subject: '', description: '', clientName: '', email: '' });
+      setNewCase({ clienteId: '', categoriaId: '', contactChannel: Channel.WEB, subject: '', description: '', clientName: '', contactName: '', phone: '', email: '' });
       loadCasos();
     } catch (err) {
       alert('Error al crear el caso');
@@ -211,8 +264,8 @@ const BandejaCasos: React.FC = () => {
 
       {showModal && (
         <div className="fixed inset-0 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300" style={{backgroundColor: 'rgba(20, 84, 120, 0.6)'}}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform animate-in zoom-in-95 scale-in duration-300 border border-slate-200/50">
-            <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden transform animate-in zoom-in-95 scale-in duration-300 border border-slate-200/50 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white sticky top-0 bg-white z-10">
               <div>
                 <h3 className="text-2xl font-semibold text-slate-900">Crear Nuevo Caso SAC</h3>
                 <p className="text-xs text-slate-500 mt-1 font-medium">Completa los datos del caso</p>
@@ -224,46 +277,141 @@ const BandejaCasos: React.FC = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleCreateCase} className="p-6 space-y-5">
-              <div>
-                <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Empresa / Cliente</label>
-                <input 
-                  type="text" required 
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium"
-                  placeholder="Nombre de la empresa"
-                  value={newCase.clientName}
-                  onChange={e => setNewCase({...newCase, clientName: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Asunto</label>
-                <input 
-                  type="text" required 
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium"
-                  placeholder="Resumen del caso"
-                  value={newCase.subject}
-                  onChange={e => setNewCase({...newCase, subject: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Descripción</label>
-                <textarea 
-                  required rows={4}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium resize-none"
-                  placeholder="Detalles del caso..."
-                  value={newCase.description}
-                  onChange={e => setNewCase({...newCase, description: e.target.value})}
-                ></textarea>
-              </div>
-              <div>
-                <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Email Cliente</label>
-                <input 
-                  type="email" required 
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium"
-                  placeholder="cliente@empresa.com"
-                  value={newCase.email}
-                  onChange={e => setNewCase({...newCase, email: e.target.value})}
-                />
+            <form onSubmit={handleCreateCase} className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Columna Izquierda */}
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Cliente <span className="text-red-500">*</span></label>
+                    <select
+                      required
+                      value={newCase.clienteId}
+                      onChange={(e) => handleClienteChange(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium appearance-none cursor-pointer"
+                    >
+                      <option value="">Seleccione un cliente...</option>
+                      {clientes.map((cliente) => (
+                        <option key={cliente.idCliente} value={cliente.idCliente}>
+                          {cliente.idCliente} - {cliente.nombreEmpresa}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Empresa / Cliente</label>
+                    <input 
+                      type="text" required 
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                      placeholder="Nombre de la empresa"
+                      value={newCase.clientName}
+                      onChange={e => setNewCase({...newCase, clientName: e.target.value})}
+                      readOnly={!!newCase.clienteId}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Contacto Principal</label>
+                      <input 
+                        type="text"
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                        placeholder="Nombre contacto"
+                        value={newCase.contactName}
+                        onChange={e => setNewCase({...newCase, contactName: e.target.value})}
+                        readOnly={!!newCase.clienteId}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Teléfono</label>
+                      <input 
+                        type="tel"
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                        placeholder="+50370000000"
+                        value={newCase.phone}
+                        onChange={e => setNewCase({...newCase, phone: e.target.value})}
+                        readOnly={!!newCase.clienteId}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Email Cliente</label>
+                    <input 
+                      type="email" required 
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                      placeholder="cliente@empresa.com"
+                      value={newCase.email}
+                      onChange={e => setNewCase({...newCase, email: e.target.value})}
+                      readOnly={!!newCase.clienteId}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Medio de Contacto <span className="text-red-500">*</span></label>
+                    <select
+                      required
+                      value={newCase.contactChannel}
+                      onChange={(e) => setNewCase({...newCase, contactChannel: e.target.value as Channel})}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium appearance-none cursor-pointer"
+                    >
+                      <option value={Channel.WEB}>Web</option>
+                      <option value={Channel.EMAIL}>Email</option>
+                      <option value={Channel.WHATSAPP}>WhatsApp</option>
+                      <option value={Channel.TELEFONO}>Teléfono</option>
+                      <option value={Channel.REDES_SOCIALES}>Redes Sociales</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Columna Derecha */}
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Categoría <span className="text-red-500">*</span></label>
+                    <select
+                      required
+                      value={newCase.categoriaId}
+                      onChange={(e) => setNewCase({...newCase, categoriaId: e.target.value})}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium appearance-none cursor-pointer"
+                    >
+                      <option value="">Seleccione una categoría...</option>
+                      {categorias.length > 0 ? (
+                        categorias.map((categoria) => (
+                          <option key={categoria.idCategoria} value={categoria.idCategoria}>
+                            {categoria.nombre} — SLA {categoria.slaDias} días
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>Cargando categorías...</option>
+                      )}
+                    </select>
+                    {categorias.length === 0 && (
+                      <p className="text-xs text-slate-400 mt-1">Cargando categorías...</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Asunto <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" required 
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium"
+                      placeholder="Resumen del caso"
+                      value={newCase.subject}
+                      onChange={e => setNewCase({...newCase, subject: e.target.value})}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-black text-slate-600 uppercase tracking-wider mb-2">Descripción <span className="text-red-500">*</span></label>
+                    <textarea 
+                      required rows={8}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all bg-slate-50 focus:bg-white font-medium resize-none"
+                      placeholder="Detalles del caso..."
+                      value={newCase.description}
+                      onChange={e => setNewCase({...newCase, description: e.target.value})}
+                    ></textarea>
+                  </div>
+                </div>
               </div>
               <div className="pt-2 flex gap-3">
                 <button 

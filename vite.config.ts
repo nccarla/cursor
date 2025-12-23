@@ -11,11 +11,19 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
         cors: true,
         proxy: {
-          '/api/webhook': {
+          // Autenticación (login/usuarios) - se puede sobreescribir vía VITE_WEBHOOK_URL
+          '/api/webhook/auth': {
             target: 'https://n8n.red.com.sv',
             changeOrigin: true,
             secure: true,
-            rewrite: (path) => '/webhook/6f27bb4b-bfcd-4776-b554-5194569be2a7',
+            rewrite: () => '/webhook/6f27bb4b-bfcd-4776-b554-5194569be2a7',
+          },
+          // Casos (lista / creación) - usa el webhook de casos que compartiste
+          '/api/casos': {
+            target: 'https://n8n.red.com.sv',
+            changeOrigin: true,
+            secure: true,
+            rewrite: () => '/webhook/97a6c0f7-ea50-4542-b99e-710b96b58652',
           },
         },
       },
