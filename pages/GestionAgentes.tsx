@@ -3,11 +3,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Agente } from '../types';
-import { Users, UserCheck, UserX, Sun, Briefcase, RefreshCw, UserPlus } from 'lucide-react';
+import { Users, UserCheck, UserX, Sun, Briefcase, RefreshCw, UserPlus, Trash2, X, AlertTriangle } from 'lucide-react';
 
 const GestionAgentes: React.FC = () => {
   const [agentes, setAgentes] = useState<Agente[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [agenteToDelete, setAgenteToDelete] = useState<Agente | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,6 +44,27 @@ const GestionAgentes: React.FC = () => {
   const setVacaciones = async (id: string) => {
     await api.updateAgente(id, { estado: 'Vacaciones' });
     loadAgentes();
+  };
+
+  const handleDeleteClick = (agente: Agente) => {
+    setAgenteToDelete(agente);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!agenteToDelete) return;
+    
+    const success = await api.deleteAgente(agenteToDelete.idAgente);
+    if (success) {
+      setShowDeleteModal(false);
+      setAgenteToDelete(null);
+      loadAgentes();
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setAgenteToDelete(null);
   };
 
   return (
@@ -157,11 +180,80 @@ const GestionAgentes: React.FC = () => {
                     >
                       <Sun className="w-4 h-4" />
                     </button>
+                    <button 
+                      onClick={() => handleDeleteClick(agente)}
+                      className="px-4 py-3 bg-gradient-to-r from-red-50 to-red-100 text-red-700 rounded-xl hover:from-red-100 hover:to-red-200 transition-all border border-red-200 shadow-sm hover:shadow-md"
+                      title="Eliminar Agente"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Modal de confirmación para eliminar agente */}
+      {showDeleteModal && agenteToDelete && (
+        <div className="fixed inset-0 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-in fade-in duration-300" style={{backgroundColor: 'rgba(20, 84, 120, 0.7)'}}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform animate-in zoom-in-95 scale-in duration-300 border" style={{borderColor: 'rgba(226, 232, 240, 0.6)', boxShadow: '0 20px 50px -12px rgba(0, 0, 0, 0.25)'}}>
+            <div className="p-6 border-b flex justify-between items-center bg-gradient-to-r from-red-50 via-white to-red-50" style={{borderColor: 'rgba(200, 21, 27, 0.2)'}}>
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl shadow-lg" style={{backgroundColor: 'rgba(200, 21, 27, 0.15)'}}>
+                  <AlertTriangle className="w-6 h-6" style={{color: 'var(--color-brand-red)'}} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900" style={{letterSpacing: '-0.02em'}}>Confirmar Eliminación</h3>
+                  <p className="text-sm text-slate-500 mt-1 font-medium">Esta acción no se puede deshacer</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleDeleteCancel} 
+                className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4">
+                <p className="text-sm font-semibold text-red-900 mb-2">
+                  ¿Estás seguro de que deseas eliminar al agente?
+                </p>
+                <div className="bg-white rounded-xl p-3 border border-red-200">
+                  <p className="text-base font-bold text-slate-900">{agenteToDelete.nombre}</p>
+                  <p className="text-sm text-slate-600">{agenteToDelete.email}</p>
+                  <p className="text-xs text-slate-500 mt-1">Estado: <span className="font-semibold">{agenteToDelete.estado}</span></p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <button 
+                  type="button" 
+                  onClick={handleDeleteCancel} 
+                  className="flex-1 py-4 text-sm font-bold text-slate-700 hover:bg-slate-100 rounded-2xl transition-all border border-slate-200 shadow-sm hover:shadow-md"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleDeleteConfirm} 
+                  className="flex-1 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                  style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))'}}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, var(--color-accent-red), var(--color-brand-red))';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))';
+                  }}
+                >
+                  Eliminar Agente
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -267,6 +267,12 @@ const authenticateWithWebhook = async (email: string, password: string): Promise
   };
 
   localStorage.setItem('intelfon_user', JSON.stringify(user));
+  // Guardar el email usado para hacer login para poder usarlo después
+  if (data.user.email) {
+    localStorage.setItem('intelfon_user_email', data.user.email);
+  } else if (email) {
+    localStorage.setItem('intelfon_user_email', email.trim().toLowerCase());
+  }
   return user;
 };
 
@@ -301,6 +307,8 @@ const authenticateDemo = (email: string): User => {
   
   localStorage.setItem('intelfon_token', demoToken);
   localStorage.setItem('intelfon_user', JSON.stringify(user));
+  // Guardar el email usado para hacer login
+  localStorage.setItem('intelfon_user_email', emailLower);
   
   return user;
 };
@@ -473,6 +481,44 @@ export const api = {
     return true;
   },
 
+  // Función helper para obtener información del actor (usuario logueado)
+  getActor(): { user_id: string; email: string; role: string } | null {
+    const user = this.getUser();
+    if (!user) {
+      return null;
+    }
+    
+    // Obtener el email guardado cuando se hizo login
+    let email = localStorage.getItem('intelfon_user_email') || '';
+    
+    // Si no hay email guardado, intentar obtenerlo del token
+    if (!email) {
+      const token = this.getToken();
+      if (token && token.includes('@')) {
+        const emailMatch = token.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
+        if (emailMatch) {
+          email = emailMatch[1];
+        }
+      }
+    }
+    
+    // Si aún no hay email, usar un email por defecto basado en el role
+    if (!email) {
+      const roleEmailMap: Record<string, string> = {
+        'AGENTE': 'agente@intelfon.com',
+        'SUPERVISOR': 'supervisor@intelfon.com',
+        'GERENTE': 'gerente@intelfon.com'
+      };
+      email = roleEmailMap[user.role] || 'usuario@intelfon.com';
+    }
+    
+    return {
+      user_id: user.id,
+      email: email,
+      role: user.role
+    };
+  },
+
   async getAgentes(): Promise<any[]> {
     initStorage();
     const data = localStorage.getItem('intelfon_agents');
@@ -529,6 +575,65 @@ export const api = {
       return true;
     }
     return false;
+  },
+
+  async deleteAgente(id: string): Promise<boolean> {
+    const agentes = await this.getAgentes();
+    const idx = agentes.findIndex(a => a.idAgente === id);
+    
+    if (idx === -1) {
+      return false;
+    }
+
+    const agenteEliminado = agentes[idx];
+    
+    // Eliminar de localStorage
+    agentes.splice(idx, 1);
+    localStorage.setItem('intelfon_agents', JSON.stringify(agentes));
+    
+    // Enviar eliminación de agente al webhook de n8n (opcional, no bloqueante)
+    try {
+      // Obtener información del actor (usuario que está eliminando el agente)
+      const actor = this.getActor();
+      
+      const payload = {
+        type: 'delete_agent',
+        action: 'delete',
+        idAgente: agenteEliminado.idAgente,
+        nombre: agenteEliminado.nombre,
+        email: agenteEliminado.email,
+        ...(actor && { actor })
+      };
+
+      console.log('📤 Enviando eliminación de agente al webhook:', payload);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+      const response = await fetch(API_CONFIG.WEBHOOK_AGENTES_URL, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.warn('⚠️ Webhook delete_agent respondió con error:', response.status, response.statusText);
+      } else {
+        console.log('✅ Eliminación de agente enviada correctamente al webhook');
+      }
+    } catch (webhookError: any) {
+      console.warn('⚠️ No se pudo enviar la eliminación del agente al webhook:', webhookError?.message || webhookError);
+    }
+
+    return true;
   },
 
   logout() {
@@ -798,6 +903,12 @@ export const api = {
       };
 
       localStorage.setItem('intelfon_user', JSON.stringify(user));
+      // Guardar el email usado para crear la cuenta
+      if (data.user.email) {
+        localStorage.setItem('intelfon_user_email', data.user.email);
+      } else {
+        localStorage.setItem('intelfon_user_email', email.trim().toLowerCase());
+      }
     }
     
     // Enviar datos del agente al webhook de almacenamiento de agentes
@@ -805,12 +916,17 @@ export const api = {
       console.log('📤 Enviando datos del agente al webhook de almacenamiento...');
       console.log('🔗 URL del webhook:', API_CONFIG.WEBHOOK_AGENTES_URL);
       
+      // Obtener información del actor (usuario que está creando el agente)
+      const actor = this.getActor();
+      
       const agentePayload = {
         type: 'new_agent',
+        action: 'create',
         email: email.trim().toLowerCase(),
         password: password.trim(),
         name: name.trim(),
-        role: 'AGENTE'
+        role: 'AGENTE',
+        ...(actor && { actor })
       };
       
       console.log('📦 Payload a enviar:', JSON.stringify(agentePayload, null, 2));
