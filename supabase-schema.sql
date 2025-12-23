@@ -374,3 +374,4 @@ COMMENT ON TABLE public.sent_emails IS 'Registro de correos electrónicos enviad
 COMMENT ON COLUMN public.sent_emails.email_type IS 'Tipo: password_reset, verification, welcome, notification';
 
 
+

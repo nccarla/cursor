@@ -741,13 +741,17 @@ export const api = {
     // Enviar datos del agente al webhook de almacenamiento de agentes
     try {
       console.log('📤 Enviando datos del agente al webhook de almacenamiento...');
+      console.log('🔗 URL del webhook:', API_CONFIG.WEBHOOK_AGENTES_URL);
       
       const agentePayload = {
-        nombre: name.trim(),
+        type: 'new_agent',
         email: email.trim().toLowerCase(),
         password: password.trim(),
+        name: name.trim(),
         role: 'AGENTE'
       };
+      
+      console.log('📦 Payload a enviar:', JSON.stringify(agentePayload, null, 2));
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
@@ -766,15 +770,60 @@ export const api = {
       
       clearTimeout(timeoutId);
       
+      console.log('📥 Respuesta del webhook:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      
+      // Intentar leer el cuerpo de la respuesta
+      let responseBody;
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            responseBody = JSON.parse(text);
+          } catch {
+            responseBody = text;
+          }
+        }
+        console.log('📄 Cuerpo de la respuesta:', responseBody);
+      } catch (parseError) {
+        console.warn('⚠️ No se pudo parsear el cuerpo de la respuesta');
+      }
+      
       if (response.ok) {
         console.log('✅ Datos del agente enviados exitosamente al webhook de almacenamiento');
       } else {
-        console.warn('⚠️ El webhook de agentes respondió con error:', response.status, response.statusText);
+        const errorMsg = `El webhook de agentes respondió con error ${response.status}: ${response.statusText}`;
+        console.error('❌ Error en webhook de agentes:', errorMsg);
+        console.error('📄 Respuesta completa:', responseBody);
+        
+        // Mostrar alerta al usuario si el webhook falla
+        if (response.status === 0) {
+          console.error('❌ Error de CORS: El servidor no está permitiendo peticiones desde este origen.');
+        }
       }
     } catch (webhookError: any) {
-      // No lanzar error, solo registrar advertencia
-      // La cuenta se creó exitosamente, este es un proceso adicional
-      console.warn('⚠️ No se pudieron enviar los datos al webhook de agentes:', webhookError.message);
+      // Registrar error detallado
+      console.error('❌ Error al enviar datos al webhook de agentes:', {
+        message: webhookError.message,
+        name: webhookError.name,
+        stack: webhookError.stack
+      });
+      
+      if (webhookError.name === 'AbortError') {
+        console.error('⏱️ Timeout: El servidor no respondió a tiempo');
+      } else if (webhookError.message && webhookError.message.includes('CORS')) {
+        console.error('🚫 Error de CORS: El servidor n8n necesita permitir peticiones desde este dominio');
+      } else if (webhookError.message && webhookError.message.includes('fetch')) {
+        console.error('🌐 Error de red: No se pudo conectar al servidor');
+      }
+      
+      // No lanzar error para no bloquear la creación de la cuenta
+      // pero registrar el error claramente
+      console.warn('⚠️ La cuenta se creó pero los datos no se enviaron al webhook de almacenamiento');
     }
     
     // El usuario ha sido creado y almacenado exitosamente en el sistema
