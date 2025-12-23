@@ -31,17 +31,18 @@ const Register: React.FC = () => {
     }
 
     try {
-      // Crear cuenta y almacenarla en n8n
-      const user = await api.createAccount(email, password, name);
+      // Crear cuenta y almacenarla en n8n (skipLogin=true porque es desde supervisor)
+      const result = await api.createAccount(email, password, name, undefined, true);
       
-      // Si llegamos aquí, el usuario fue creado y almacenado exitosamente en n8n
+      // Si llegamos aquí, el agente fue creado exitosamente
       // Mostrar mensaje de éxito antes de redirigir
       setError('');
       
-      // Después de crear la cuenta, volver a gestión de agentes
+      // Después de crear el agente, volver a gestión de agentes
+      // El evento 'agente-creado' ya fue disparado en api.ts, así que la lista se recargará automáticamente
       setTimeout(() => {
         navigate('/app/agentes');
-      }, 500);
+      }, 300);
     } catch (err: any) {
       // Mejorar mensajes de error para indicar problemas con n8n
       const errorMessage = err.message || 'Error al crear la cuenta. Intenta de nuevo.';
@@ -171,6 +172,7 @@ const Register: React.FC = () => {
 };
 
 export default Register;
+
 
 
 

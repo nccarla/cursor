@@ -110,7 +110,25 @@ const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account',
       console.log('📦 Respuesta del webhook para', scenario, ':', result);
       
       // Para login y register, el webhook puede retornar: { id, name, role, email }
-      // O puede retornar un formato diferente
+      // O puede retornar un formato diferente o incluso {} vacío si solo confirma creación
+      
+      // Si el webhook retorna vacío pero la respuesta fue exitosa, generar datos desde el payload
+      if (scenario === 'new_account' && (!result || Object.keys(result).length === 0)) {
+        console.log('⚠️ Webhook retornó objeto vacío, generando datos desde payload...');
+        const generatedId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const normalizedResponse = {
+          token: `token-${generatedId}-${Date.now()}`,
+          user: {
+            id: generatedId,
+            name: payload?.name || payload?.nombre || '',
+            role: 'AGENTE', // Por defecto AGENTE para nuevas cuentas
+            email: payload?.email || '',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(payload?.name || payload?.nombre || '')}&background=0f172a&color=fff`
+          }
+        };
+        console.log('✅ Respuesta generada desde payload:', normalizedResponse);
+        return normalizedResponse;
+      }
       
       // Verificar si hay campos faltantes y proporcionar mensajes más específicos
       const missingFields: string[] = [];
@@ -467,6 +485,47 @@ export const api = {
     if (idx !== -1) {
       agentes[idx] = { ...agentes[idx], ...data };
       localStorage.setItem('intelfon_agents', JSON.stringify(agentes));
+      
+      // Enviar actualización de agente al webhook de n8n (opcional, no bloqueante)
+      try {
+        const payload = {
+          type: 'update_agent',
+          idAgente: agentes[idx].idAgente,
+          nombre: agentes[idx].nombre,
+          email: agentes[idx].email,
+          estado: agentes[idx].estado,
+          ordenRoundRobin: agentes[idx].ordenRoundRobin,
+          casosActivos: agentes[idx].casosActivos,
+        };
+
+        console.log('📤 Enviando actualización de agente al webhook:', payload);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+        const response = await fetch(API_CONFIG.WEBHOOK_AGENTES_URL, {
+          method: 'POST',
+          mode: 'cors',
+          credentials: 'omit',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          console.warn('⚠️ Webhook update_agent respondió con error:', response.status, response.statusText);
+        } else {
+          console.log('✅ Actualización de agente enviada correctamente al webhook');
+        }
+      } catch (webhookError: any) {
+        console.warn('⚠️ No se pudo enviar la actualización del agente al webhook:', webhookError?.message || webhookError);
+      }
+
       return true;
     }
     return false;
@@ -634,7 +693,6 @@ export const api = {
     
     // Preparar el payload exacto que requiere el webhook
     // Estructura: { type: "reset_password", email: "", new_password: "", code: "" }
-    // NOTA: Se envía la nueva contraseña junto con el código
     const payload = {
       email: email.trim().toLowerCase(),
       new_password: password.trim(),
@@ -663,7 +721,8 @@ export const api = {
   // Crear nueva cuenta con webhook (type: register)
   // SOLO el supervisor puede crear cuentas, y DEBE pasar por el webhook de Make.com
   // El usuario se almacena directamente en el sistema a través del webhook
-  async createAccount(email: string, password: string, name: string, additionalData?: any): Promise<User> {
+  // Si skipLogin es true, NO guarda el token/usuario en localStorage (para crear agentes desde supervisor)
+  async createAccount(email: string, password: string, name: string, additionalData?: any, skipLogin: boolean = false): Promise<User | { success: boolean; message: string }> {
     // Validaciones previas
     if (!email || !email.trim()) {
       throw new Error('El correo electrónico es requerido');
@@ -724,19 +783,22 @@ export const api = {
       throw new Error('Rol de usuario inválido. La cuenta debe tener un rol válido asignado.');
     }
 
-    // Almacenar el token (el usuario ya está almacenado en el sistema)
-    localStorage.setItem('intelfon_token', data.token);
-    
-    // Almacenar información del usuario EXACTAMENTE como viene del webhook
-    // Esto confirma que el usuario fue almacenado exitosamente
-    const user: User = {
-      id: data.user.id,
-      name: data.user.name.trim(),
-      role: data.user.role,
-      avatar: data.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.user.name)}&background=0f172a&color=fff`
-    };
+    // Si skipLogin es true, NO guardar token/usuario (para crear agentes desde supervisor)
+    if (!skipLogin) {
+      // Almacenar el token (el usuario ya está almacenado en el sistema)
+      localStorage.setItem('intelfon_token', data.token);
+      
+      // Almacenar información del usuario EXACTAMENTE como viene del webhook
+      // Esto confirma que el usuario fue almacenado exitosamente
+      const user: User = {
+        id: data.user.id,
+        name: data.user.name.trim(),
+        role: data.user.role,
+        avatar: data.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.user.name)}&background=0f172a&color=fff`
+      };
 
-    localStorage.setItem('intelfon_user', JSON.stringify(user));
+      localStorage.setItem('intelfon_user', JSON.stringify(user));
+    }
     
     // Enviar datos del agente al webhook de almacenamiento de agentes
     try {
@@ -795,6 +857,42 @@ export const api = {
       
       if (response.ok) {
         console.log('✅ Datos del agente enviados exitosamente al webhook de almacenamiento');
+        
+        // Si skipLogin es true, agregar el agente a la lista inmediatamente
+        if (skipLogin) {
+          try {
+            // Obtener agentes actuales
+            const agentesActuales = await this.getAgentes();
+            
+            // Crear nuevo agente desde la respuesta del webhook o desde los datos enviados
+            const nuevoAgente: any = {
+              idAgente: responseBody?.id || responseBody?.idAgente || `agente-${Date.now()}`,
+              nombre: responseBody?.nombre || responseBody?.name || name.trim(),
+              email: responseBody?.email || email.trim().toLowerCase(),
+              estado: responseBody?.estado || 'Activo',
+              ordenRoundRobin: responseBody?.ordenRoundRobin || (agentesActuales.length > 0 ? Math.max(...agentesActuales.map((a: any) => a.ordenRoundRobin || 0)) + 1 : 1),
+              ultimoCasoAsignado: responseBody?.ultimoCasoAsignado || new Date().toISOString(),
+              casosActivos: responseBody?.casosActivos || 0
+            };
+            
+            // Verificar que el agente no exista ya (por email)
+            const existeAgente = agentesActuales.some((a: any) => a.email === nuevoAgente.email);
+            if (!existeAgente) {
+              // Agregar el nuevo agente a la lista
+              agentesActuales.push(nuevoAgente);
+              localStorage.setItem('intelfon_agents', JSON.stringify(agentesActuales));
+              
+              console.log('✅ Nuevo agente agregado a la lista:', nuevoAgente);
+              
+              // Emitir evento personalizado para notificar que se agregó un agente
+              window.dispatchEvent(new CustomEvent('agente-creado', { detail: nuevoAgente }));
+            } else {
+              console.log('ℹ️ El agente ya existe en la lista, no se agregará duplicado');
+            }
+          } catch (error) {
+            console.warn('⚠️ No se pudo agregar el agente a la lista local:', error);
+          }
+        }
       } else {
         const errorMsg = `El webhook de agentes respondió con error ${response.status}: ${response.statusText}`;
         console.error('❌ Error en webhook de agentes:', errorMsg);
@@ -826,7 +924,19 @@ export const api = {
       console.warn('⚠️ La cuenta se creó pero los datos no se enviaron al webhook de almacenamiento');
     }
     
+    // Si skipLogin es true, retornar solo confirmación de éxito
+    if (skipLogin) {
+      return { success: true, message: 'Agente creado exitosamente' };
+    }
+    
     // El usuario ha sido creado y almacenado exitosamente en el sistema
+    const user: User = {
+      id: data.user.id,
+      name: data.user.name.trim(),
+      role: data.user.role,
+      avatar: data.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.user.name)}&background=0f172a&color=fff`
+    };
+    
     return user;
   }
 };

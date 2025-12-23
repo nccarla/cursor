@@ -12,6 +12,18 @@ const GestionAgentes: React.FC = () => {
 
   useEffect(() => {
     loadAgentes();
+    
+    // Escuchar evento cuando se crea un nuevo agente
+    const handleAgenteCreado = () => {
+      console.log('🔄 Recargando lista de agentes después de crear nuevo agente...');
+      loadAgentes();
+    };
+    
+    window.addEventListener('agente-creado', handleAgenteCreado);
+    
+    return () => {
+      window.removeEventListener('agente-creado', handleAgenteCreado);
+    };
   }, []);
 
   const loadAgentes = async () => {
