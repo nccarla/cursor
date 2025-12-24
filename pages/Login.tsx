@@ -52,16 +52,27 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{background: 'linear-gradient(135deg, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)'}}>
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50 animate-in zoom-in-95 fade-in">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-black relative overflow-hidden">
+      {/* Fondo animado con triángulos */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="triangle-bg">
+          <div className="triangle triangle-1"></div>
+          <div className="triangle triangle-2"></div>
+          <div className="triangle triangle-3"></div>
+          <div className="triangle triangle-4"></div>
+          <div className="triangle triangle-5"></div>
+          <div className="triangle triangle-6"></div>
+        </div>
+      </div>
+      <div className="max-w-md w-full relative z-10">
+        <div className="bg-slate-900 rounded-3xl shadow-2xl p-10 border border-slate-800 animate-in zoom-in-95 fade-in">
           {/* Logo y Nombre de la Empresa */}
           <div className="text-center mb-8 animate-in fade-in slide-in-from-top">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-brand-blue mb-4 shadow-brand-blue-lg transform -rotate-3 animate-in scale-in fade-in animate-float">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 transform -rotate-3 animate-in scale-in fade-in animate-float" style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)'}}>
               <ShieldCheck className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-4xl font-semibold text-slate-900 leading-tight mb-2 animate-in slide-in-from-bottom fade-in" style={{animationDelay: '100ms', letterSpacing: '-0.02em'}}>INTELFON</h1>
-            <p className="text-slate-600 font-medium leading-relaxed animate-in slide-in-from-bottom fade-in" style={{animationDelay: '200ms', letterSpacing: '0'}}>
+            <h1 className="text-4xl font-semibold leading-tight mb-2 animate-in slide-in-from-bottom fade-in" style={{animationDelay: '100ms', letterSpacing: '-0.02em', color: 'var(--color-brand-red)'}}>INTELFON</h1>
+            <p className="text-slate-300 font-medium leading-relaxed animate-in slide-in-from-bottom fade-in" style={{animationDelay: '200ms', letterSpacing: '0'}}>
               Sistema de Gestión SAC
             </p>
           </div>
@@ -75,7 +86,7 @@ const Login: React.FC = () => {
             )}
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 tracking-normal mb-2">Correo Institucional</label>
+              <label className="block text-xs font-medium text-slate-300 tracking-normal mb-2">Correo Institucional</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
@@ -84,13 +95,13 @@ const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ejemplo@intelfon.com"
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:bg-white transition-all font-medium"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:bg-slate-750 transition-all font-medium"
                   onFocus={(e) => {
-                    e.target.style.borderColor = 'var(--color-accent-blue)';
-                    e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.1)';
+                    e.target.style.borderColor = 'var(--color-brand-red)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(200, 21, 27, 0.1)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = 'var(--color-accent-light)';
+                    e.target.style.borderColor = 'rgb(51, 65, 85)';
                     e.target.style.boxShadow = '';
                   }}
                 />
@@ -99,8 +110,8 @@ const Login: React.FC = () => {
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="block text-xs font-medium text-slate-400 tracking-normal">Contraseña</label>
-                <Link to="/forgot-password" className="text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors">
+                <label className="block text-xs font-medium text-slate-300 tracking-normal">Contraseña</label>
+                <Link to="/forgot-password" className="text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors">
                   ¿Olvidaste el acceso?
                 </Link>
               </div>
@@ -112,13 +123,13 @@ const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:bg-white transition-all font-medium"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:bg-slate-750 transition-all font-medium"
                   onFocus={(e) => {
-                    e.target.style.borderColor = 'var(--color-accent-blue)';
-                    e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.1)';
+                    e.target.style.borderColor = 'var(--color-brand-red)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(200, 21, 27, 0.1)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = 'var(--color-accent-light)';
+                    e.target.style.borderColor = 'rgb(51, 65, 85)';
                     e.target.style.boxShadow = '';
                   }}
                 />
@@ -129,14 +140,14 @@ const Login: React.FC = () => {
               type="submit"
               disabled={loading}
               className="w-full text-white font-semibold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
-              style={{background: 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)'}}
+              style={{background: 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)'}}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue))';
+                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-red), var(--color-brand-red))';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)';
+                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)';
               }}
             >
               {loading ? (
@@ -150,24 +161,24 @@ const Login: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-slate-200 text-center">
-            <p className="text-xs text-slate-400 font-medium tracking-normal mb-3">Acceso Rápido Demo</p>
+          <div className="mt-8 pt-6 border-t border-slate-700 text-center">
+            <p className="text-xs text-slate-300 font-medium tracking-normal mb-3">Acceso Rápido Demo</p>
             <div className="flex flex-wrap justify-center gap-2">
               <button 
                 onClick={() => setEmail('agente@intelfon.com')} 
-                className="px-4 py-2 bg-slate-100 text-xs font-medium text-slate-600 rounded-full border border-slate-200 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+                className="px-4 py-2 bg-slate-800 text-xs font-medium text-slate-300 rounded-full border border-slate-700 hover:bg-slate-700 hover:text-white hover:border-red-600 transition-colors"
               >
                 Agente
               </button>
               <button 
                 onClick={() => setEmail('supervisor@intelfon.com')} 
-                className="px-4 py-2 bg-slate-100 text-xs font-medium text-slate-600 rounded-full border border-slate-200 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+                className="px-4 py-2 bg-slate-800 text-xs font-medium text-slate-300 rounded-full border border-slate-700 hover:bg-slate-700 hover:text-white hover:border-red-600 transition-colors"
               >
                 Supervisor
               </button>
               <button 
                 onClick={() => setEmail('gerente@intelfon.com')} 
-                className="px-4 py-2 bg-slate-100 text-xs font-medium text-slate-600 rounded-full border border-slate-200 hover:bg-slate-200 hover:text-slate-800 transition-colors"
+                className="px-4 py-2 bg-slate-800 text-xs font-medium text-slate-300 rounded-full border border-slate-700 hover:bg-slate-700 hover:text-white hover:border-red-600 transition-colors"
               >
                 Gerente
               </button>

@@ -69,7 +69,7 @@ const Register: React.FC = () => {
             <ArrowLeft className="w-5 h-5 text-slate-600" />
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-brand-blue flex items-center justify-center shadow-brand-blue-lg">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)'}}>
               <UserPlus className="w-6 h-6 text-white" />
             </div>
             <div>

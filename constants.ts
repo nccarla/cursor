@@ -17,7 +17,7 @@ export const ROLE_HOMEPAGE: Record<Role, string> = {
 };
 
 export const STATE_COLORS: Record<string, string> = {
-  [CaseStatus.NUEVO]: 'bg-blue-100 text-blue-700 border-blue-200',
+  [CaseStatus.NUEVO]: 'bg-slate-900 text-white border-slate-700',
   [CaseStatus.EN_PROCESO]: 'bg-amber-100 text-amber-700 border-amber-200',
   [CaseStatus.PENDIENTE_CLIENTE]: 'bg-purple-100 text-purple-700 border-purple-200',
   [CaseStatus.ESCALADO]: 'bg-red-100 text-red-700 border-red-200',

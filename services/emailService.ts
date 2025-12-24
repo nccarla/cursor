@@ -102,10 +102,10 @@ const generatePasswordResetEmail = (email: string, code: string, expiresAt: numb
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #145478 0%, #107ab4 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+    .header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
     .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; }
-    .code-box { background: white; border: 2px solid #107ab4; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
-    .code { font-size: 32px; font-weight: bold; color: #107ab4; letter-spacing: 8px; font-family: monospace; }
+    .code-box { background: white; border: 2px solid #1e293b; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
+    .code { font-size: 32px; font-weight: bold; color: #1e293b; letter-spacing: 8px; font-family: monospace; }
     .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
     .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 15px 0; }
   </style>

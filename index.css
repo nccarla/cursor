@@ -1,15 +1,15 @@
 :root {
   /* COLORES PRIMARIOS */
   --color-brand-red: #c8151b;
-  --color-brand-blue: #145478; /* Azul oscuro primario */
+  --color-brand-blue: #0f172a; /* Azul oscuro primario - mismo estilo del login */
   --color-brand-gray: #afacb2;
 
   /* COLORES SECUNDARIOS */
   --color-accent-red: #f52938;
   --color-accent-darkred: #700306;
-  --color-accent-blue: #107ab4; /* Azul brillante */
-  --color-accent-blue-2: #409abb; /* Azul medio */
-  --color-accent-blue-3: #7bb9cb; /* Azul pastel claro */
+  --color-accent-blue: #1e293b; /* Azul oscuro - mismo estilo del login */
+  --color-accent-blue-2: #334155; /* Azul medio oscuro */
+  --color-accent-blue-3: #475569; /* Azul grisáceo oscuro */
   --color-accent-gray: #989797;
   --color-accent-light: #e4e4e4;
   --color-accent-black: #000000;
@@ -44,5 +44,119 @@
 /* Fondo hero con degradado de marca */
 .bg-brand-hero {
   background: linear-gradient(135deg, var(--color-brand-blue), var(--color-accent-blue-2));
+}
+
+/* Animación de triángulos para el fondo del login */
+.triangle-bg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0.15;
+}
+
+.triangle {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0.4;
+  filter: blur(1px);
+}
+
+.triangle-1 {
+  border-left: 80px solid transparent;
+  border-right: 80px solid transparent;
+  border-bottom: 140px solid;
+  border-bottom-color: rgba(200, 21, 27, 0.2);
+  top: 10%;
+  left: 5%;
+  animation: float-triangle 20s ease-in-out infinite;
+  animation-delay: 0s;
+}
+
+.triangle-2 {
+  border-left: 60px solid transparent;
+  border-right: 60px solid transparent;
+  border-bottom: 100px solid;
+  border-bottom-color: rgba(245, 41, 56, 0.15);
+  top: 60%;
+  left: 15%;
+  animation: float-triangle 25s ease-in-out infinite;
+  animation-delay: -5s;
+}
+
+.triangle-3 {
+  border-left: 100px solid transparent;
+  border-right: 100px solid transparent;
+  border-bottom: 170px solid;
+  border-bottom-color: rgba(200, 21, 27, 0.1);
+  top: 30%;
+  right: 10%;
+  animation: float-triangle 30s ease-in-out infinite;
+  animation-delay: -10s;
+}
+
+.triangle-4 {
+  border-left: 70px solid transparent;
+  border-right: 70px solid transparent;
+  border-bottom: 120px solid;
+  border-bottom-color: rgba(245, 41, 56, 0.12);
+  bottom: 20%;
+  right: 20%;
+  animation: float-triangle 22s ease-in-out infinite;
+  animation-delay: -7s;
+}
+
+.triangle-5 {
+  border-left: 90px solid transparent;
+  border-right: 90px solid transparent;
+  border-bottom: 155px solid;
+  border-bottom-color: rgba(200, 21, 27, 0.08);
+  top: 5%;
+  right: 5%;
+  animation: float-triangle 28s ease-in-out infinite;
+  animation-delay: -12s;
+}
+
+.triangle-6 {
+  border-left: 50px solid transparent;
+  border-right: 50px solid transparent;
+  border-bottom: 85px solid;
+  border-bottom-color: rgba(245, 41, 56, 0.18);
+  bottom: 10%;
+  left: 10%;
+  animation: float-triangle 24s ease-in-out infinite;
+  animation-delay: -8s;
+}
+
+@keyframes float-triangle {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(30px, -40px) rotate(5deg);
+  }
+  50% {
+    transform: translate(-20px, 30px) rotate(-5deg);
+  }
+  75% {
+    transform: translate(40px, 20px) rotate(3deg);
+  }
+}
+
+/* Carrusel de Agentes - Ocultar scrollbar */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Responsive para carrusel de agentes */
+@media (max-width: 768px) {
+  .scrollbar-hide {
+    scroll-snap-type: x mandatory;
+  }
 }
 

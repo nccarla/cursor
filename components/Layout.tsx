@@ -67,10 +67,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="w-64 bg-slate-900 text-white flex flex-col fixed h-full z-10">
-        <div className="p-6 border-b border-slate-800">
-          <h1 className="text-xl font-bold tracking-tight text-blue-400">INTELFON SAC</h1>
-          <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-semibold">Gestión de Casos</p>
+      <aside className="w-64 text-white flex flex-col fixed h-full z-10" style={{backgroundColor: 'var(--color-brand-blue)'}}>
+        <div className="p-6 border-b" style={{borderColor: 'rgba(255, 255, 255, 0.1)'}}>
+          <h1 className="text-xl font-bold tracking-tight" style={{color: 'var(--color-brand-red)'}}>INTELFON SAC</h1>
+          <p className="text-xs text-slate-300 mt-1 uppercase tracking-widest font-semibold">Gestión de Casos</p>
         </div>
         
         <nav className="flex-1 mt-6 px-4 space-y-1">
@@ -79,8 +79,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               key={item.name}
               onClick={() => navigate(item.path)}
               className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                location.pathname === item.path ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                location.pathname === item.path ? 'text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'
               }`}
+              style={location.pathname === item.path ? {backgroundColor: 'var(--color-brand-red)'} : {}}
             >
               <item.icon className="w-5 h-5 mr-3" />
               {item.name}
@@ -88,12 +89,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800 bg-slate-900/50">
+        <div className="p-4 border-t" style={{borderColor: 'rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(15, 23, 42, 0.5)'}}>
           <div className="flex items-center mb-4 px-2">
             <img 
               src={user?.avatar} 
               alt={user?.name} 
-              className="w-8 h-8 rounded-full ring-2 ring-slate-800"
+              className="w-8 h-8 rounded-full ring-2 ring-white/20"
             />
             <div className="ml-3 overflow-hidden">
               <p className="text-sm font-medium truncate">{user?.name}</p>

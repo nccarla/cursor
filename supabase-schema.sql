@@ -347,9 +347,9 @@ CREATE POLICY "Agents can update their own status"
 
 -- Insertar categorías por defecto
 INSERT INTO public.categories (name, description, sla_days, color, icon) VALUES
-    ('Soporte Técnico', 'Problemas técnicos y de infraestructura', 5, '#107ab4', 'wrench'),
+    ('Soporte Técnico', 'Problemas técnicos y de infraestructura', 5, '#1e293b', 'wrench'),
     ('Facturación', 'Consultas y problemas de facturación', 3, '#c8151b', 'dollar-sign'),
-    ('Ventas', 'Consultas comerciales y nuevas ventas', 2, '#409abb', 'shopping-cart'),
+    ('Ventas', 'Consultas comerciales y nuevas ventas', 2, '#334155', 'shopping-cart'),
     ('General', 'Consultas generales', 7, '#afacb2', 'help-circle')
 ON CONFLICT DO NOTHING;
 

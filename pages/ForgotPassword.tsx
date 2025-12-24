@@ -57,15 +57,15 @@ const ForgotPassword: React.FC = () => {
   return (
     <div 
       className="min-h-screen flex items-center justify-center px-4 transition-all duration-400 ease-in-out"
+      className="bg-black"
       style={{
-        background: 'linear-gradient(135deg, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)',
         opacity: isExiting ? 0 : 1,
         transform: isExiting ? 'scale(0.95) translateY(-20px)' : 'scale(1) translateY(0)',
       }}
     >
       <div className="max-w-md w-full">
         <div 
-          className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50 transition-all duration-400 ease-in-out"
+          className="bg-slate-900 rounded-3xl shadow-2xl p-10 border border-slate-800 transition-all duration-400 ease-in-out"
           style={{
             opacity: isExiting ? 0 : 1,
             transform: isExiting ? 'scale(0.95) translateY(-30px)' : 'scale(1) translateY(0)',
@@ -79,11 +79,11 @@ const ForgotPassword: React.FC = () => {
           </Link>
 
           <div className="mb-8 animate-in fade-in slide-in-from-top">
-            <div className="w-16 h-16 bg-gradient-brand-blue rounded-2xl flex items-center justify-center mb-6 shadow-brand-blue-lg animate-in scale-in fade-in animate-float">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 animate-in scale-in fade-in animate-float" style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)'}}>
               <Mail className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-3xl font-semibold text-slate-900 leading-tight mb-3 animate-in slide-in-from-bottom fade-in" style={{animationDelay: '100ms'}}>¿Problemas para entrar?</h2>
-            <p className="text-slate-600 mt-2 font-medium leading-relaxed animate-in slide-in-from-bottom fade-in" style={{animationDelay: '200ms'}}>
+            <h2 className="text-3xl font-semibold leading-tight mb-3 animate-in slide-in-from-bottom fade-in" style={{animationDelay: '100ms', color: 'var(--color-brand-red)'}}>¿Problemas para entrar?</h2>
+            <p className="text-slate-300 mt-2 font-medium leading-relaxed animate-in slide-in-from-bottom fade-in" style={{animationDelay: '200ms'}}>
               Ingresa tu correo institucional y te enviaremos un código para restablecer tu contraseña.
             </p>
           </div>
@@ -99,13 +99,13 @@ const ForgotPassword: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ejemplo@intelfon.com"
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:bg-white transition-all font-medium"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:bg-slate-750 transition-all font-medium"
                   onFocus={(e) => {
-                    e.target.style.borderColor = 'var(--color-accent-blue)';
-                    e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.1)';
+                    e.target.style.borderColor = 'var(--color-brand-red)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(200, 21, 27, 0.1)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = 'var(--color-accent-light)';
+                    e.target.style.borderColor = 'rgb(51, 65, 85)';
                     e.target.style.boxShadow = '';
                   }}
                 />
@@ -161,14 +161,14 @@ const ForgotPassword: React.FC = () => {
               type="submit"
               disabled={loading || status === 'success'}
               className="w-full text-white font-semibold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
-              style={{background: 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)'}}
+              style={{background: 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)'}}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue))';
+                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-red), var(--color-brand-red))';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)';
+                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)';
               }}
             >
               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Enviar Código de Recuperación'}

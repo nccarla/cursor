@@ -59,22 +59,23 @@ const ResetPassword: React.FC = () => {
   return (
     <div 
       className="min-h-screen flex items-center justify-center px-4 font-sans transition-all duration-500 ease-out"
+      className="bg-black"
       style={{
-        background: 'linear-gradient(135deg, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)',
         opacity: isEntering ? 0 : 1,
         transform: isEntering ? 'scale(1.05) translateY(20px)' : 'scale(1) translateY(0)',
       }}
     >
       <div className="max-w-md w-full">
         <div 
-          className="bg-white rounded-3xl shadow-2xl p-10 border border-slate-200/50 transition-all duration-500 ease-out"
+          className="bg-slate-900 rounded-3xl shadow-2xl p-10 border border-slate-800 transition-all duration-500 ease-out"
           style={{
             opacity: isEntering ? 0 : 1,
             transform: isEntering ? 'scale(0.9) translateY(30px)' : 'scale(1) translateY(0)',
           }}
         >
           <div 
-            className="w-16 h-16 bg-gradient-brand-blue text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-brand-blue-lg transition-all duration-500"
+            className="w-16 h-16 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-500"
+            style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)'}}
             style={{
               animation: isEntering ? 'none' : 'scaleInRotate 0.6s ease-out 0.2s both',
             }}
@@ -82,7 +83,8 @@ const ResetPassword: React.FC = () => {
             <Lock className="w-8 h-8" />
           </div>
           <h2 
-            className="text-3xl font-semibold text-slate-900 leading-tight mb-3 text-center transition-all duration-500"
+            className="text-3xl font-semibold leading-tight mb-3 text-center transition-all duration-500"
+            style={{color: 'var(--color-brand-red)'}}
             style={{
               animation: isEntering ? 'none' : 'slideInFromBottom 0.5s ease-out 0.3s both',
             }}
@@ -90,7 +92,7 @@ const ResetPassword: React.FC = () => {
             Nueva contraseña
           </h2>
           <p 
-            className="text-slate-600 mt-2 font-medium text-center transition-all duration-500"
+            className="text-slate-300 mt-2 font-medium text-center transition-all duration-500"
             style={{
               animation: isEntering ? 'none' : 'fadeIn 0.5s ease-out 0.4s both',
             }}
@@ -116,13 +118,13 @@ const ResetPassword: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   minLength={6}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:ring-4 focus:ring-accent-blue/20 focus:border-accent-blue focus:bg-white transition-all font-medium"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:ring-4 focus:ring-red-500/20 focus:border-red-600 focus:bg-slate-750 transition-all font-medium"
                   onFocus={(e) => {
-                    e.target.style.borderColor = 'var(--color-accent-blue)';
-                    e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.1)';
+                    e.target.style.borderColor = 'var(--color-brand-red)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(200, 21, 27, 0.1)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = 'var(--color-accent-light)';
+                    e.target.style.borderColor = 'rgb(51, 65, 85)';
                     e.target.style.boxShadow = '';
                   }}
                   autoFocus
@@ -141,13 +143,13 @@ const ResetPassword: React.FC = () => {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
                   minLength={6}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:ring-4 focus:ring-accent-blue/20 focus:border-accent-blue focus:bg-white transition-all font-medium"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:ring-4 focus:ring-red-500/20 focus:border-red-600 focus:bg-slate-750 transition-all font-medium"
                   onFocus={(e) => {
-                    e.target.style.borderColor = 'var(--color-accent-blue)';
-                    e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.1)';
+                    e.target.style.borderColor = 'var(--color-brand-red)';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(200, 21, 27, 0.1)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = 'var(--color-accent-light)';
+                    e.target.style.borderColor = 'rgb(51, 65, 85)';
                     e.target.style.boxShadow = '';
                   }}
                 />
@@ -175,13 +177,13 @@ const ResetPassword: React.FC = () => {
               style={{
                 background: loading || status === 'success' || password.length < 6 || password !== confirmPassword
                   ? 'linear-gradient(to right, var(--color-accent-gray), var(--color-brand-gray))'
-                  : 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)',
+                  : 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)',
                 cursor: loading || status === 'success' || password.length < 6 || password !== confirmPassword ? 'not-allowed' : 'pointer',
                 opacity: loading || status === 'success' || password.length < 6 || password !== confirmPassword ? 0.7 : 1
               }}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled && !loading && password.length >= 6 && password === confirmPassword) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-red), var(--color-brand-red))';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                 }
               }}
@@ -189,7 +191,7 @@ const ResetPassword: React.FC = () => {
                 if (!e.currentTarget.disabled && !loading) {
                   e.currentTarget.style.background = loading || status === 'success' || password.length < 6 || password !== confirmPassword
                     ? 'linear-gradient(to right, var(--color-accent-gray), var(--color-brand-gray))'
-                    : 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)';
+                    : 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }
               }}

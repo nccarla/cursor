@@ -1,6 +1,6 @@
 
-import { Case, CaseStatus, KPI, User, Role } from '../types';
-import { MOCK_CASOS, MOCK_AGENTES, MOCK_USERS } from './mockData';
+import { Case, CaseStatus, KPI, User, Role, Cliente, Categoria } from '../types';
+import { MOCK_CASOS, MOCK_AGENTES, MOCK_USERS, MOCK_CLIENTES, MOCK_CATEGORIAS } from './mockData';
 import { API_CONFIG } from '../config';
 import { emailService } from './emailService';
 
@@ -523,6 +523,18 @@ export const api = {
     initStorage();
     const data = localStorage.getItem('intelfon_agents');
     return data ? JSON.parse(data) : MOCK_AGENTES;
+  },
+
+  async getClientes(): Promise<Cliente[]> {
+    return MOCK_CLIENTES;
+  },
+
+  async getClienteById(clienteId: string): Promise<Cliente | undefined> {
+    return MOCK_CLIENTES.find(c => c.idCliente === clienteId);
+  },
+
+  async getCategorias(): Promise<Categoria[]> {
+    return MOCK_CATEGORIAS.filter(cat => cat.activa);
   },
 
   async updateAgente(id: string, data: any): Promise<boolean> {

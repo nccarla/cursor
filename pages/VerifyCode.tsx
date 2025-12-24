@@ -57,22 +57,23 @@ const VerifyCode: React.FC = () => {
   return (
     <div 
       className="min-h-screen flex items-center justify-center px-4 font-sans transition-all duration-500 ease-out"
+      className="bg-black"
       style={{
-        background: 'linear-gradient(135deg, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)',
         opacity: isEntering ? 0 : 1,
         transform: isEntering ? 'scale(1.05) translateY(20px)' : 'scale(1) translateY(0)',
       }}
     >
       <div className="max-w-md w-full">
         <div 
-          className="bg-white rounded-3xl shadow-2xl p-10 text-center border border-slate-200/50 transition-all duration-500 ease-out"
+          className="bg-slate-900 rounded-3xl shadow-2xl p-10 text-center border border-slate-800 transition-all duration-500 ease-out"
           style={{
             opacity: isEntering ? 0 : 1,
             transform: isEntering ? 'scale(0.9) translateY(30px)' : 'scale(1) translateY(0)',
           }}
         >
           <div 
-            className="w-16 h-16 bg-gradient-brand-blue text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-brand-blue-lg transition-all duration-500"
+            className="w-16 h-16 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-500"
+            style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)'}}
             style={{
               animation: isEntering ? 'none' : 'scaleInRotate 0.6s ease-out 0.2s both',
             }}
@@ -80,7 +81,8 @@ const VerifyCode: React.FC = () => {
             <ShieldCheck className="w-8 h-8" />
           </div>
           <h2 
-            className="text-3xl font-semibold text-slate-900 mb-3 transition-all duration-500"
+            className="text-3xl font-semibold mb-3 transition-all duration-500"
+            style={{color: 'var(--color-brand-red)'}}
             style={{
               animation: isEntering ? 'none' : 'slideInFromBottom 0.5s ease-out 0.3s both',
             }}
@@ -88,12 +90,12 @@ const VerifyCode: React.FC = () => {
             Verifica tu identidad
           </h2>
           <p 
-            className="text-slate-600 mt-2 font-medium transition-all duration-500"
+            className="text-slate-300 mt-2 font-medium transition-all duration-500"
             style={{
               animation: isEntering ? 'none' : 'fadeIn 0.5s ease-out 0.4s both',
             }}
           >
-            Hemos enviado un código a <b className="text-slate-900">{email}</b>
+            Hemos enviado un código a <b className="text-white">{email}</b>
           </p>
 
           <form 
@@ -120,17 +122,17 @@ const VerifyCode: React.FC = () => {
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="000000"
-                className="w-full text-center text-4xl font-semibold tracking-[0.5em] py-4 rounded-2xl border-2 border-accent-light bg-accent-light focus:outline-none focus:bg-white transition-all duration-300"
+                className="w-full text-center text-4xl font-semibold tracking-[0.5em] py-4 rounded-2xl border-2 border-slate-700 bg-slate-800 text-white focus:outline-none focus:bg-slate-750 transition-all duration-300"
                 style={{
                   animation: isEntering ? 'none' : 'scale-in 0.4s ease-out 0.7s both',
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = 'var(--color-accent-blue)';
-                  e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.1)';
+                  e.target.style.borderColor = 'var(--color-brand-red)';
+                  e.target.style.boxShadow = '0 0 0 4px rgba(200, 21, 27, 0.1)';
                   e.target.style.transform = 'scale(1.02)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = 'var(--color-accent-light)';
+                  e.target.style.borderColor = 'rgb(51, 65, 85)';
                   e.target.style.boxShadow = '';
                   e.target.style.transform = 'scale(1)';
                 }}
@@ -162,13 +164,13 @@ const VerifyCode: React.FC = () => {
               style={{
                 background: loading || code.length < 6
                   ? 'linear-gradient(to right, var(--color-accent-gray), var(--color-brand-gray))'
-                  : 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)',
+                  : 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)',
                 cursor: loading || code.length < 6 ? 'not-allowed' : 'pointer',
                 opacity: loading || code.length < 6 ? 0.7 : 1
               }}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled && !loading && code.length >= 6) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-red), var(--color-brand-red))';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                 }
               }}
@@ -176,7 +178,7 @@ const VerifyCode: React.FC = () => {
                 if (!e.currentTarget.disabled && !loading) {
                   e.currentTarget.style.background = loading || code.length < 6
                     ? 'linear-gradient(to right, var(--color-accent-gray), var(--color-brand-gray))'
-                    : 'linear-gradient(to right, var(--color-brand-blue) 0%, var(--color-brand-blue) 75%, var(--color-accent-darkred) 100%)';
+                    : 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }
               }}
@@ -202,7 +204,7 @@ const VerifyCode: React.FC = () => {
                 backgroundColor: 'transparent',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--color-brand-blue)';
+                e.currentTarget.style.color = 'var(--color-brand-red)';
                 e.currentTarget.style.backgroundColor = 'rgba(16, 122, 180, 0.1)';
               }}
               onMouseLeave={(e) => {

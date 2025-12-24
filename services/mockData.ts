@@ -32,6 +32,106 @@ const MOCK_CATEGORIA: Categoria = {
   activa: true
 };
 
+// Mock de clientes para el selector del formulario
+export const MOCK_CLIENTES: Cliente[] = [
+  {
+    idCliente: 'CL003299',
+    nombreEmpresa: 'INVERSIONES JACARFER S.A. DE C.V.',
+    contactoPrincipal: 'Carlos Méndez',
+    email: 'carlos.mendez@jacarfer.com',
+    telefono: '+503 2222-1111',
+    pais: 'El Salvador',
+    estado: 'Activo'
+  },
+  {
+    idCliente: 'CL001234',
+    nombreEmpresa: 'TecnoCorp SA',
+    contactoPrincipal: 'Roberto Gomez',
+    email: 'roberto@tecnocorp.com',
+    telefono: '+503 2222-3333',
+    pais: 'El Salvador',
+    estado: 'Activo'
+  },
+  {
+    idCliente: 'CL005678',
+    nombreEmpresa: 'Servicios Digitales SV',
+    contactoPrincipal: 'María Rodríguez',
+    email: 'maria.rodriguez@serviciosdigitales.com',
+    telefono: '+503 2233-4455',
+    pais: 'El Salvador',
+    estado: 'Activo'
+  },
+  {
+    idCliente: 'CL009876',
+    nombreEmpresa: 'Comunicaciones Centroamérica',
+    contactoPrincipal: 'Juan Pérez',
+    email: 'juan.perez@comunicacionesca.com',
+    telefono: '+503 2244-5566',
+    pais: 'El Salvador',
+    estado: 'Activo'
+  }
+];
+
+// Categorías reales del sistema SAC
+export const MOCK_CATEGORIAS: Categoria[] = [
+  {
+    idCategoria: '1',
+    nombre: 'Soporte Técnico',
+    slaDias: 5,
+    diasAlertaSupervisor: 3,
+    diasAlertaGerente: 4,
+    activa: true
+  },
+  {
+    idCategoria: '2',
+    nombre: 'Facturación',
+    slaDias: 5,
+    diasAlertaSupervisor: 3,
+    diasAlertaGerente: 4,
+    activa: true
+  },
+  {
+    idCategoria: '3',
+    nombre: 'Reclamos',
+    slaDias: 3,
+    diasAlertaSupervisor: 2,
+    diasAlertaGerente: 2.5,
+    activa: true
+  },
+  {
+    idCategoria: '4',
+    nombre: 'Consultas Comerciales',
+    slaDias: 2,
+    diasAlertaSupervisor: 1,
+    diasAlertaGerente: 1.5,
+    activa: true
+  },
+  {
+    idCategoria: '5',
+    nombre: 'Cambios de Plan',
+    slaDias: 5,
+    diasAlertaSupervisor: 3,
+    diasAlertaGerente: 4,
+    activa: true
+  },
+  {
+    idCategoria: '6',
+    nombre: 'Cancelaciones',
+    slaDias: 3,
+    diasAlertaSupervisor: 2,
+    diasAlertaGerente: 2.5,
+    activa: true
+  },
+  {
+    idCategoria: '7',
+    nombre: 'Otros',
+    slaDias: 5,
+    diasAlertaSupervisor: 3,
+    diasAlertaGerente: 4,
+    activa: true
+  }
+];
+
 export const MOCK_CASOS: any[] = [
   {
     id: 'CASO-0001',

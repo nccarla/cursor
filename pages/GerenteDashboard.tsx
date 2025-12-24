@@ -24,13 +24,13 @@ const GerenteDashboard: React.FC = () => {
     { name: 'Resueltos', value: casos.filter(c => c.status === CaseStatus.RESUELTO).length },
   ];
 
-  const COLORS = ['#3b82f6', '#f59e0b', '#ef4444', '#10b981'];
+  const COLORS = ['#0f172a', '#f59e0b', '#ef4444', '#10b981'];
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Casos Abiertos', value: abiertos, color: 'text-blue-600', bg: 'bg-blue-50', icon: TrendingUp },
+          { label: 'Casos Abiertos', value: abiertos, color: 'text-slate-900', bg: 'bg-slate-900', icon: TrendingUp },
           { label: 'Excedidos SLA', value: vencidos, color: 'text-red-600', bg: 'bg-red-50', icon: Clock },
           { label: 'CSAT Promedio', value: kpis.csatScore, color: 'text-green-600', bg: 'bg-green-50', icon: ThumbsUp },
           { label: 'Total Histórico', value: kpis.totalCases, color: 'text-slate-600', bg: 'bg-slate-50', icon: Users },
@@ -41,7 +41,7 @@ const GerenteDashboard: React.FC = () => {
               <h3 className={`text-3xl font-black mt-1 ${kpi.color}`}>{kpi.value}</h3>
             </div>
             <div className={`p-3 rounded-xl ${kpi.bg}`}>
-              <kpi.icon className={`w-6 h-6 ${kpi.color}`} />
+              <kpi.icon className={`w-6 h-6 ${kpi.bg === 'bg-slate-900' ? 'text-white' : kpi.color}`} />
             </div>
           </div>
         ))}

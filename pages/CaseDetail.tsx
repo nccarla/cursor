@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Case, CaseStatus } from '../types';
 import { STATE_TRANSITIONS, STATE_COLORS } from '../constants';
-import { ArrowLeft, MessageSquare, History, User, Building2, Phone, Mail, Send, CheckCircle2, AlertTriangle, Clock, X } from 'lucide-react';
+import { ArrowLeft, MessageSquare, User, Building2, Phone, Mail, CheckCircle2, AlertTriangle, Clock, X, Lock } from 'lucide-react';
 
 const CaseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -110,15 +110,17 @@ const CaseDetail: React.FC = () => {
                           key={st}
                           disabled={transitionLoading}
                           onClick={onClick}
-                          className="px-6 py-3 rounded-xl bg-gradient-brand-blue text-white text-xs font-semibold tracking-normal transition-all disabled:opacity-50 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                          style={{background: 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))'}}
+                          className="px-6 py-3 rounded-xl text-white text-xs font-semibold tracking-normal transition-all disabled:opacity-50 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                          style={{background: 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)'}}
                           onMouseEnter={(e) => {
                             if (!e.currentTarget.disabled) {
-                              e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-blue), var(--color-accent-blue))';
+                              e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-red), var(--color-brand-red))';
+                              e.currentTarget.style.boxShadow = '0 14px 34px rgba(245, 41, 56, 0.28)';
                             }
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-blue), var(--color-accent-blue-2))';
+                            e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))';
+                            e.currentTarget.style.boxShadow = '0 12px 30px rgba(200, 21, 27, 0.25)';
                           }}
                         >
                           {st}
@@ -131,29 +133,6 @@ const CaseDetail: React.FC = () => {
                    </div>
                  )}
                </div>
-            </div>
-          </section>
-
-          <section className="bg-white rounded-2xl shadow-sm border-2 border-slate-200/50 p-8">
-            <h3 className="text-xl font-semibold text-slate-900 mb-8 flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">
-                <History className="w-5 h-5" style={{color: 'var(--color-accent-blue)'}} />
-              </div>
-              Línea de Tiempo
-            </h3>
-            <div className="space-y-6 relative before:absolute before:left-[19px] before:top-3 before:bottom-3 before:w-1 before:bg-gradient-to-b before:from-slate-300 before:to-slate-200 before:rounded-full">
-              {caso.history?.map((entry, idx) => (
-                <div key={idx} className="relative pl-12">
-                  <div className="absolute left-0 top-2 w-10 h-10 rounded-xl bg-gradient-brand-blue border-4 border-white flex items-center justify-center shadow-brand-blue-lg">
-                    <CheckCircle2 className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="bg-white rounded-2xl border-2 border-slate-200 p-5 shadow-sm hover:shadow-md transition-all hover:border-slate-300">
-                    <p className="text-xs text-slate-500 font-medium mb-2 tracking-normal">{new Date(entry.fechaHora).toLocaleString()}</p>
-                    <p className="text-sm text-slate-800 font-semibold leading-relaxed mb-2">{entry.detalle}</p>
-                    <p className="text-xs font-medium tracking-normal" style={{color: 'var(--color-accent-blue)'}}>Por: {entry.usuario}</p>
-                  </div>
-                </div>
-              ))}
             </div>
           </section>
         </div>
@@ -183,7 +162,7 @@ const CaseDetail: React.FC = () => {
               <h3 className="text-sm font-black text-slate-700 uppercase tracking-wider">Agente Asignado</h3>
             </div>
             <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
-              <div className="w-12 h-12 rounded-xl bg-gradient-brand-blue flex items-center justify-center text-white font-semibold text-lg shadow-brand-blue-lg">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-semibold text-lg" style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)'}}>
                 {caso.agentName.charAt(0)}
               </div>
               <p className="text-base font-bold text-slate-800">{caso.agentName}</p>
