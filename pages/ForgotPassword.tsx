@@ -56,14 +56,13 @@ const ForgotPassword: React.FC = () => {
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center px-4 transition-all duration-400 ease-in-out"
-      className="bg-black"
+      className="min-h-screen flex items-center justify-center px-4 bg-black transition-all duration-400 ease-in-out"
       style={{
         opacity: isExiting ? 0 : 1,
         transform: isExiting ? 'scale(0.95) translateY(-20px)' : 'scale(1) translateY(0)',
       }}
     >
-      <div className="max-w-md w-full">
+      <div className="max-w-md w-full relative z-10">
         <div 
           className="bg-slate-900 rounded-3xl shadow-2xl p-10 border border-slate-800 transition-all duration-400 ease-in-out"
           style={{

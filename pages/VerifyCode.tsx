@@ -56,14 +56,13 @@ const VerifyCode: React.FC = () => {
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center px-4 font-sans transition-all duration-500 ease-out"
-      className="bg-black"
+      className="min-h-screen flex items-center justify-center px-4 font-sans transition-all duration-500 ease-out bg-black"
       style={{
         opacity: isEntering ? 0 : 1,
         transform: isEntering ? 'scale(1.05) translateY(20px)' : 'scale(1) translateY(0)',
       }}
     >
-      <div className="max-w-md w-full">
+      <div className="max-w-md w-full relative z-10">
         <div 
           className="bg-slate-900 rounded-3xl shadow-2xl p-10 text-center border border-slate-800 transition-all duration-500 ease-out"
           style={{
@@ -73,8 +72,9 @@ const VerifyCode: React.FC = () => {
         >
           <div 
             className="w-16 h-16 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-500"
-            style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)'}}
             style={{
+              background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))',
+              boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)',
               animation: isEntering ? 'none' : 'scaleInRotate 0.6s ease-out 0.2s both',
             }}
           >
@@ -82,8 +82,8 @@ const VerifyCode: React.FC = () => {
           </div>
           <h2 
             className="text-3xl font-semibold mb-3 transition-all duration-500"
-            style={{color: 'var(--color-brand-red)'}}
             style={{
+              color: 'var(--color-brand-red)',
               animation: isEntering ? 'none' : 'slideInFromBottom 0.5s ease-out 0.3s both',
             }}
           >

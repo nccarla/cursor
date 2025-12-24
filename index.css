@@ -143,6 +143,97 @@
   }
 }
 
+/* Animaciones para el logo */
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 12px 30px rgba(200, 21, 27, 0.25));
+  }
+  50% {
+    opacity: 0.9;
+    filter: drop-shadow(0 12px 40px rgba(200, 21, 27, 0.4));
+  }
+}
+
+/* Animaciones para fondo dinámico del login */
+@keyframes gradientShift {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes gradientMove1 {
+  0% {
+    transform: translate(-10%, -10%) scale(1);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate(10%, 10%) scale(1.1);
+    opacity: 0.25;
+  }
+}
+
+@keyframes gradientMove2 {
+  0% {
+    transform: translate(10%, -5%) scale(1);
+    opacity: 0.25;
+  }
+  100% {
+    transform: translate(-5%, 5%) scale(1.05);
+    opacity: 0.3;
+  }
+}
+
+@keyframes gradientMove3 {
+  0% {
+    transform: translate(0%, 0%) scale(1);
+    opacity: 0.15;
+  }
+  100% {
+    transform: translate(-5%, -5%) scale(1.08);
+    opacity: 0.2;
+  }
+}
+
+/* Animación de pulso para el fondo rojo */
+@keyframes redPulse {
+  0%, 100% {
+    opacity: 0.6;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.3);
+  }
+}
+
+/* Respetar prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes gradientShift,
+  @keyframes gradientMove1,
+  @keyframes gradientMove2,
+  @keyframes gradientMove3,
+  @keyframes redPulse {
+    0%, 100% {
+      transform: none;
+      opacity: 1;
+      filter: none;
+    }
+  }
+}
+
 /* Carrusel de Agentes - Ocultar scrollbar */
 .scrollbar-hide {
   -ms-overflow-style: none;
