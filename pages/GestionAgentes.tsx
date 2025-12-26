@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
@@ -16,7 +15,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Briefcase,
-  RotateCcw
+  RotateCcw,
+  Activity,
+  CheckCircle2,
+  TrendingUp,
+  Clock
 } from 'lucide-react';
 
 const GestionAgentes: React.FC = () => {
@@ -25,21 +28,22 @@ const GestionAgentes: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [agenteToDelete, setAgenteToDelete] = useState<Agente | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [hoveredAgenteId, setHoveredAgenteId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
 
-  // Responsive: 1 en mobile, 3-4 en desktop
   const [itemsPerView, setItemsPerView] = useState(3);
-  const totalPages = Math.ceil(agentes.length / itemsPerView);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     const updateItemsPerView = () => {
       if (window.innerWidth < 640) {
-        setItemsPerView(1); // Mobile: 1 card
+        setItemsPerView(1);
       } else if (window.innerWidth < 1024) {
-        setItemsPerView(2); // Tablet: 2 cards
+        setItemsPerView(2);
       } else {
-        setItemsPerView(3); // Desktop: 3 cards
+        setItemsPerView(3);
       }
     };
     
@@ -61,6 +65,42 @@ const GestionAgentes: React.FC = () => {
       window.removeEventListener('agente-creado', handleAgenteCreado);
     };
   }, []);
+
+  useEffect(() => {
+    if (scrollContainerRef.current && agentes.length > 0) {
+      const container = scrollContainerRef.current;
+      container.scrollLeft = 0;
+      
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          const containerWidth = scrollContainerRef.current.offsetWidth;
+          const scrollWidth = scrollContainerRef.current.scrollWidth;
+          const calculatedTotalPages = Math.max(1, Math.ceil(scrollWidth / containerWidth));
+          setTotalPages(calculatedTotalPages);
+        }
+      }, 100);
+    }
+  }, [agentes.length, itemsPerView]);
+
+  useEffect(() => {
+    const updatePages = () => {
+      if (scrollContainerRef.current && agentes.length > 0) {
+        const container = scrollContainerRef.current;
+        const containerWidth = container.offsetWidth;
+        const scrollWidth = container.scrollWidth;
+        const calculatedTotalPages = Math.max(1, Math.ceil(scrollWidth / containerWidth));
+        setTotalPages(calculatedTotalPages);
+      }
+    };
+
+    window.addEventListener('resize', updatePages);
+    const timeoutId = setTimeout(updatePages, 100);
+    
+    return () => {
+      window.removeEventListener('resize', updatePages);
+      clearTimeout(timeoutId);
+    };
+  }, [agentes.length, itemsPerView]);
 
   const loadAgentes = async () => {
     setLoading(true);
@@ -104,27 +144,50 @@ const GestionAgentes: React.FC = () => {
   const scrollToIndex = (index: number) => {
     if (!scrollContainerRef.current) return;
     const container = scrollContainerRef.current;
-    const firstCard = container.querySelector('.snap-center') as HTMLElement;
-    if (!firstCard) return;
+    const containerWidth = container.offsetWidth;
+    const scrollWidth = container.scrollWidth;
     
-    const cardWidth = firstCard.offsetWidth + 16; // width + gap
-    const scrollPosition = index * cardWidth * itemsPerView;
+    const calculatedTotalPages = Math.max(1, Math.ceil(scrollWidth / containerWidth));
+    if (calculatedTotalPages !== totalPages) {
+      setTotalPages(calculatedTotalPages);
+    }
+    
+    const maxIndex = Math.max(0, calculatedTotalPages - 1);
+    const clampedIndex = Math.max(0, Math.min(index, maxIndex));
+    const scrollPosition = clampedIndex * containerWidth;
     
     container.scrollTo({
       left: scrollPosition,
       behavior: 'smooth'
     });
-    setCurrentIndex(index);
+    setCurrentIndex(clampedIndex);
   };
 
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
     const container = scrollContainerRef.current;
-    const cardWidth = container.offsetWidth / itemsPerView;
     const scrollPosition = container.scrollLeft;
-    const newIndex = Math.round(scrollPosition / (cardWidth * itemsPerView));
-    setCurrentIndex(newIndex);
+    const containerWidth = container.offsetWidth;
+    const scrollWidth = container.scrollWidth;
+    
+    const calculatedTotalPages = Math.max(1, Math.ceil(scrollWidth / containerWidth));
+    if (calculatedTotalPages !== totalPages) {
+      setTotalPages(calculatedTotalPages);
+    }
+    
+    const newIndex = Math.round(scrollPosition / containerWidth);
+    const clampedIndex = Math.max(0, Math.min(newIndex, calculatedTotalPages - 1));
+    
+    setCurrentIndex(clampedIndex);
   };
+
+  useEffect(() => {
+    return () => {
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
+      }
+    };
+  }, []);
 
   const nextPage = () => {
     if (currentIndex < totalPages - 1) {
@@ -160,9 +223,53 @@ const GestionAgentes: React.FC = () => {
     return styles[estado as keyof typeof styles] || styles.Inactivo;
   };
 
+  const getEstadoOperativo = (agente: Agente) => {
+    if (agente.estado !== 'Activo') return null;
+    
+    if (agente.casosActivos === 0) {
+      return { texto: 'Sin casos', color: 'text-slate-500', icon: CheckCircle2 };
+    } else if (agente.casosActivos >= 5) {
+      return { texto: 'Carga alta', color: 'text-amber-600', icon: AlertTriangle };
+    } else {
+      return { texto: 'Disponible', color: 'text-green-600', icon: Activity };
+    }
+  };
+
+  const getCargaWorkloadColor = (casosActivos: number) => {
+    if (casosActivos === 0) return 'bg-green-500';
+    if (casosActivos >= 5) return 'bg-red-500';
+    if (casosActivos >= 3) return 'bg-amber-500';
+    return 'bg-green-500';
+  };
+
+  const getCargaWorkloadPercent = (casosActivos: number) => {
+    const max = 8;
+    return Math.min(100, (casosActivos / max) * 100);
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 60) return `hace ${diffMins} min`;
+    if (diffHours < 24) return `hace ${diffHours}h`;
+    return `hace ${diffDays} días`;
+  };
+
+  const getCasosHoy = (agente: Agente) => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const ultimoCaso = new Date(agente.ultimoCasoAsignado);
+    return ultimoCaso >= hoy ? 1 : 0;
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center bg-gradient-to-r from-slate-50 to-slate-100 p-5 rounded-2xl border border-slate-200">
+    <div className="flex flex-col h-full" style={{ overflow: 'hidden', gap: '1.5rem' }}>
+      <div className="flex justify-between items-center bg-gradient-to-r from-slate-50 to-slate-100 p-5 rounded-2xl border border-slate-200 flex-shrink-0">
          <div>
            <h2 className="text-lg font-semibold text-slate-900 mb-1">Gestión de Agentes</h2>
            <p className="text-slate-600 text-sm font-medium">Control de disponibilidad y carga de trabajo del equipo SAC.</p>
@@ -189,40 +296,74 @@ const GestionAgentes: React.FC = () => {
          </div>
       </div>
 
-      {agentes.length === 0 ? (
+      {loading && agentes.length === 0 ? (
+        <div className="flex gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="flex-shrink-0 bg-white rounded-2xl border-2 border-slate-200/50 p-4 w-80 animate-pulse">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 bg-slate-200 rounded-xl"></div>
+                <div className="flex-1">
+                  <div className="h-4 bg-slate-200 rounded w-24 mb-2"></div>
+                  <div className="h-3 bg-slate-200 rounded w-16"></div>
+                </div>
+              </div>
+              <div className="h-16 bg-slate-100 rounded-xl mb-3"></div>
+              <div className="h-10 bg-slate-200 rounded-xl"></div>
+            </div>
+          ))}
+        </div>
+      ) : agentes.length === 0 ? (
         <div className="bg-white rounded-2xl border-2 border-slate-200/50 p-16 text-center">
           <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Users className="w-10 h-10 text-slate-400" />
           </div>
           <h3 className="text-lg font-bold text-slate-800 mb-2">No hay agentes disponibles</h3>
-          <p className="text-slate-500 text-sm">Los agentes aparecerán aquí cuando estén registrados</p>
+          <p className="text-slate-500 text-sm mb-6">Los agentes aparecerán aquí cuando estén registrados</p>
+          <button
+            onClick={() => navigate('/app/crear-cuenta')}
+            className="px-6 py-3 text-white font-semibold rounded-xl hover:shadow-xl transition-all flex items-center gap-2 mx-auto"
+            style={{background: 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))'}}
+          >
+            <UserPlus className="w-4 h-4" />
+            Crear primer agente
+          </button>
         </div>
       ) : (
-        <div className="relative w-full">
-          {/* Carrusel Container */}
-          <div className="relative w-full">
-            {/* Flechas de Navegación */}
+        <div className="relative w-full flex-1" style={{ overflow: 'hidden', minHeight: 0, display: 'flex', flexDirection: 'column', maxHeight: '100%' }}>
+          {/* Microcopy */}
+          {agentes.length > itemsPerView && (
+            <p className="text-xs text-slate-500 text-center mb-2 flex-shrink-0">
+              Desliza para ver más agentes
+            </p>
+          )}
+
+          <div className="relative w-full flex-1" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: '100%' }}>
+            {/* Flechas de Navegación Mejoradas */}
             {agentes.length > itemsPerView && (
               <>
                 <button
                   onClick={prevPage}
                   disabled={currentIndex === 0}
-                  className={`absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-white rounded-full p-2.5 shadow-lg hover:shadow-xl transition-all duration-200 ${
-                    currentIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'
+                  className={`absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-white rounded-full p-3 shadow-xl hover:shadow-2xl transition-all duration-200 border-2 ${
+                    currentIndex === 0 
+                      ? 'opacity-40 cursor-not-allowed border-slate-200' 
+                      : 'hover:scale-110 border-slate-300 hover:border-slate-400'
                   }`}
                   aria-label="Anterior"
                 >
-                  <ChevronLeft className="w-5 h-5 text-slate-700" />
+                  <ChevronLeft className={`w-6 h-6 ${currentIndex === 0 ? 'text-slate-400' : 'text-slate-700'}`} />
                 </button>
                 <button
                   onClick={nextPage}
                   disabled={currentIndex >= totalPages - 1}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 z-20 bg-white rounded-full p-2.5 shadow-lg hover:shadow-xl transition-all duration-200 ${
-                    currentIndex >= totalPages - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110'
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-white rounded-full p-3 shadow-xl hover:shadow-2xl transition-all duration-200 border-2 ${
+                    currentIndex >= totalPages - 1 
+                      ? 'opacity-40 cursor-not-allowed border-slate-200' 
+                      : 'hover:scale-110 border-slate-300 hover:border-slate-400'
                   }`}
                   aria-label="Siguiente"
                 >
-                  <ChevronRight className="w-5 h-5 text-slate-700" />
+                  <ChevronRight className={`w-6 h-6 ${currentIndex >= totalPages - 1 ? 'text-slate-400' : 'text-slate-700'}`} />
                 </button>
               </>
             )}
@@ -231,52 +372,90 @@ const GestionAgentes: React.FC = () => {
             <div
               ref={scrollContainerRef}
               onScroll={handleScroll}
-              className="overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth w-full"
+              className="scrollbar-hide snap-x snap-mandatory"
               style={{
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
-                WebkitScrollbar: { display: 'none' }
+                WebkitScrollbar: { display: 'none' },
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                paddingTop: '20px',
+                paddingBottom: '20px',
+                paddingLeft: '0',
+                paddingRight: '0',
+                scrollBehavior: 'smooth',
+                width: '100%',
+                marginLeft: '0',
+                marginRight: '0',
+                flex: '1 1 auto',
+                minHeight: 0,
+                maxHeight: '100%'
               } as React.CSSProperties}
             >
-              <div className="flex gap-4 pb-4">
-                {agentes.map((agente, idx) => (
+              <div className="flex gap-4 items-center justify-center" style={{ minHeight: '100%', alignItems: 'center', boxSizing: 'border-box' }}>
+                <div style={{ minWidth: 'calc(50% - 140px)', flexShrink: 0 }}></div>
+                {agentes.map((agente, idx) => {
+                  const isHovered = hoveredAgenteId === agente.idAgente;
+                  const isAnyHovered = hoveredAgenteId !== null;
+                  const estadoOperativo = getEstadoOperativo(agente);
+                  const cargaPercent = getCargaWorkloadPercent(agente.casosActivos);
+                  const cargaColor = getCargaWorkloadColor(agente.casosActivos);
+                  const casosHoy = getCasosHoy(agente);
+                  
+                  return (
                   <div
                     key={agente.idAgente}
-                    className="snap-center flex-shrink-0 bg-white rounded-2xl border-2 border-slate-200/50 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
+                    className="snap-center flex-shrink-0 bg-white rounded-2xl border-2 border-slate-200/50 shadow-sm overflow-hidden group"
                     style={{
                       width: `calc((100% - ${(itemsPerView - 1) * 16}px) / ${itemsPerView})`,
-                      minWidth: '280px'
+                      minWidth: '280px',
+                      maxWidth: '280px',
+                      opacity: isAnyHovered && !isHovered ? 0.5 : 1,
+                      transform: isHovered ? 'scale(1.03) translateY(-4px)' : isAnyHovered ? 'scale(0.95)' : 'scale(1)',
+                      transformOrigin: 'center center',
+                      zIndex: isHovered ? 50 : 1,
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      pointerEvents: 'auto',
+                      visibility: 'visible',
+                      flexShrink: 0,
+                      boxShadow: isHovered ? '0 20px 40px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
                     }}
+                    onMouseEnter={() => setHoveredAgenteId(agente.idAgente)}
+                    onMouseLeave={() => setHoveredAgenteId(null)}
                   >
-                    <div className="p-4 w-full">
+                    <div className="p-3 w-full">
                       {/* Header: Avatar con Ring de Estado */}
-                      <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-2.5 mb-2.5">
                         <div className="relative flex-shrink-0">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center font-bold text-lg shadow-md">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center font-bold text-base shadow-md">
                             {agente.nombre.charAt(0)}
                           </div>
                           <div className={`absolute -inset-1 rounded-xl ring-2 ${getEstadoRingColor(agente.estado)} ring-offset-2 ring-offset-white`}></div>
                         </div>
                         <div className="flex-1 min-w-0 overflow-hidden">
-                          <h4 className="font-bold text-slate-900 text-base mb-1 truncate">{agente.nombre}</h4>
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-xs font-semibold ${getEstadoBadge(agente.estado)}`}>
-                            {agente.estado}
-                          </span>
+                          <h4 className="font-bold text-slate-900 text-sm mb-0.5 truncate">{agente.nombre}</h4>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-xs font-semibold ${getEstadoBadge(agente.estado)}`}>
+                              {agente.estado}
+                            </span>
+                            {estadoOperativo && (
+                              <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${estadoOperativo.color}`}>
+                                <estadoOperativo.icon className="w-2.5 h-2.5" />
+                                {estadoOperativo.texto}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Métricas en una fila */}
+                      {/* Métricas con barra de carga */}
                       {(() => {
-                        // Calcular el orden de prioridad para recibir casos
-                        // 1. Filtrar agentes activos
-                        // 2. Ordenar por casos activos (menos casos = mayor prioridad)
-                        // 3. Si hay empate, usar ordenRoundRobin como desempate
                         const agentesConPrioridad = agentes
                           .map(a => ({
                             ...a,
                             prioridad: a.estado === 'Activo' 
-                              ? a.casosActivos * 1000 + a.ordenRoundRobin // Menos casos = menor número = mayor prioridad
-                              : 999999 // Agentes inactivos al final
+                              ? a.casosActivos * 1000 + a.ordenRoundRobin
+                              : 999999
                           }))
                           .sort((a, b) => a.prioridad - b.prioridad);
                         
@@ -284,37 +463,74 @@ const GestionAgentes: React.FC = () => {
                         const esSiguiente = posicionPrioridad === 1 && agente.estado === 'Activo';
                         
                         return (
-                          <div className="flex items-center gap-3 py-2.5 mb-3 border-y border-slate-100">
-                            <div className="flex items-center gap-2 flex-1 min-w-0" title="Casos activos asignados">
-                              <Briefcase className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-xs font-medium text-slate-500 truncate">Activos</p>
-                                <p className="text-lg font-bold text-slate-900">{agente.casosActivos}</p>
+                          <div className="space-y-2 mb-2">
+                            {/* Casos Activos con Barra de Carga */}
+                            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <Briefcase className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                                  <span className="text-xs font-medium text-slate-600">Activos</span>
+                                </div>
+                                <span className="text-base font-bold text-slate-900">{agente.casosActivos}</span>
+                              </div>
+                              {/* Barra de carga visual */}
+                              <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${cargaColor}`}
+                                  style={{ width: `${cargaPercent}%` }}
+                                />
                               </div>
                             </div>
-                            <div className="w-px h-8 bg-slate-200 flex-shrink-0"></div>
-                            <div className="flex items-center gap-2 flex-1 min-w-0" title={esSiguiente ? 'Siguiente en asignación (menos casos activos entre agentes activos)' : `Orden de prioridad para recibir casos: Posición ${posicionPrioridad}`}>
-                              <RotateCcw className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-xs font-medium text-slate-500 truncate">R-Robin</p>
-                                <p className="text-lg font-bold text-slate-900 whitespace-nowrap">
+
+                            {/* R-Robin con destacado */}
+                            <div className={`p-2.5 rounded-xl border-2 transition-all ${
+                              esSiguiente 
+                                ? 'bg-green-50 border-green-300 shadow-sm' 
+                                : 'bg-slate-50 border-slate-200'
+                            }`}>
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <RotateCcw className={`w-3.5 h-3.5 ${esSiguiente ? 'text-green-600' : 'text-slate-500'} flex-shrink-0`} />
+                                <span className={`text-xs font-medium ${esSiguiente ? 'text-green-700' : 'text-slate-600'}`}>
+                                  R-Robin
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`text-base font-bold ${esSiguiente ? 'text-green-700' : 'text-slate-900'}`}>
                                   #{posicionPrioridad}
-                                  {esSiguiente && (
-                                    <span className="ml-1 text-xs font-semibold text-green-600">Siguiente</span>
-                                  )}
-                                </p>
+                                </span>
+                                {esSiguiente && (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs font-semibold border border-green-200">
+                                    <TrendingUp className="w-2.5 h-2.5" />
+                                    Siguiente
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
                         );
                       })()}
 
+                      {/* Contexto adicional */}
+                      {(casosHoy > 0 || agente.ultimoCasoAsignado) && (
+                        <div className="mb-3 px-2 py-1.5 bg-slate-50 rounded-lg border border-slate-200">
+                          <div className="flex items-center gap-2 text-xs text-slate-600">
+                            <Clock className="w-3 h-3" />
+                            <span className="font-medium">
+                              {casosHoy > 0 
+                                ? `Casos hoy: ${casosHoy}`
+                                : `Último caso: ${formatTimeAgo(agente.ultimoCasoAsignado)}`
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Acciones */}
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {/* Acción Primaria: Activar/Desactivar */}
                         <button 
                           onClick={() => toggleEstado(agente.idAgente, agente.estado)}
-                          className={`w-full py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md ${
+                          className={`w-full py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md ${
                             agente.estado === 'Activo' 
                               ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200' 
                               : 'text-white'
@@ -337,57 +553,62 @@ const GestionAgentes: React.FC = () => {
                           }}
                           title={agente.estado === 'Activo' ? 'Desactivar agente' : 'Activar agente'}
                         >
-                          {agente.estado === 'Activo' ? <UserX className="w-3.5 h-3.5 flex-shrink-0" /> : <UserCheck className="w-3.5 h-3.5 flex-shrink-0" />}
-                          <span className="truncate">{agente.estado === 'Activo' ? 'Desactivar' : 'Activar'}</span>
+                          {agente.estado === 'Activo' ? <UserX className="w-3 h-3 flex-shrink-0" /> : <UserCheck className="w-3 h-3 flex-shrink-0" />}
+                          <span className="truncate text-xs">{agente.estado === 'Activo' ? 'Desactivar' : 'Activar'}</span>
                         </button>
 
                         {/* Acciones Secundarias */}
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5">
                           <button 
                             onClick={() => setVacaciones(agente.idAgente)}
                             disabled={agente.estado === 'Vacaciones'}
-                            className={`flex-1 py-2 bg-gradient-to-r from-amber-100 to-amber-50 text-amber-700 rounded-xl hover:from-amber-200 hover:to-amber-100 transition-all border border-amber-200 shadow-sm hover:shadow-md flex items-center justify-center gap-1.5 min-w-0 ${
-                              agente.estado === 'Vacaciones' ? 'opacity-60 cursor-not-allowed' : ''
+                            className={`flex-1 py-1.5 rounded-lg transition-all border shadow-sm hover:shadow-md flex items-center justify-center gap-1 min-w-0 ${
+                              agente.estado === 'Vacaciones'
+                                ? 'bg-amber-200 text-amber-800 border-amber-300 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-amber-100 to-amber-50 text-amber-700 hover:from-amber-200 hover:to-amber-100 border-amber-200'
                             }`}
                             title={agente.estado === 'Vacaciones' ? 'Ya está en vacaciones' : 'Marcar en vacaciones'}
                           >
-                            <Sun className="w-3.5 h-3.5 flex-shrink-0" />
+                            <Sun className="w-3 h-3 flex-shrink-0" />
                             <span className="text-xs font-semibold truncate">Vacaciones</span>
                           </button>
-                          
-                          {/* Acción Destructiva Separada */}
-                          <button 
-                            onClick={() => handleDeleteClick(agente)}
-                            className="px-2.5 py-2 bg-gradient-to-r from-red-50 to-red-100 text-red-700 rounded-xl hover:from-red-100 hover:to-red-200 transition-all border border-red-200 shadow-sm hover:shadow-md flex-shrink-0"
-                            title="Eliminar agente"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </div>
+
+                        {/* Acción Destructiva Separada */}
+                        <button 
+                          onClick={() => handleDeleteClick(agente)}
+                          className="w-full py-1.5 px-2 bg-gradient-to-r from-red-50 to-red-100 text-red-700 rounded-lg hover:from-red-100 hover:to-red-200 transition-all border border-red-200 shadow-sm hover:shadow-md flex items-center justify-center gap-1.5 group"
+                          title="Eliminar agente permanentemente"
+                        >
+                          <Trash2 className="w-3 h-3 group-hover:scale-110 transition-transform flex-shrink-0" />
+                          <span className="text-xs font-semibold">Eliminar</span>
+                        </button>
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
+                <div style={{ minWidth: 'calc(50% - 140px)', flexShrink: 0 }}></div>
               </div>
             </div>
           </div>
 
-          {/* Indicadores de Posición */}
-          {agentes.length > itemsPerView && totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-4">
-              {Array.from({ length: totalPages }).map((_, index) => (
+          {/* Indicadores de Posición Mejorados - Siempre visible */}
+          {agentes.length > 0 && (
+            <div className="flex justify-center items-center gap-3 mt-4 flex-shrink-0">
+              {totalPages > 1 && Array.from({ length: totalPages }).map((_, index) => (
                 <button
                   key={index}
                   onClick={() => scrollToIndex(index)}
-                  className={`h-2 rounded-full transition-all duration-300 ${
+                  className={`h-2.5 rounded-full transition-all duration-300 ${
                     index === currentIndex
-                      ? 'w-8 bg-slate-800 shadow-md'
-                      : 'w-2 bg-slate-300 hover:bg-slate-400'
+                      ? 'w-10 bg-slate-800 shadow-lg'
+                      : 'w-2.5 bg-slate-300 hover:bg-slate-400'
                   }`}
                   aria-label={`Ir a página ${index + 1}`}
                 />
               ))}
-              <span className="ml-3 text-xs font-medium text-slate-500">
+              <span className="ml-2 px-3 py-1 bg-slate-100 rounded-full text-xs font-semibold text-slate-700 border border-slate-200">
                 {currentIndex + 1} / {totalPages}
               </span>
             </div>

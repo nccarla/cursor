@@ -66,14 +66,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-64 text-white flex flex-col fixed h-full z-10" style={{backgroundColor: 'var(--color-brand-blue)'}}>
-        <div className="p-6 border-b" style={{borderColor: 'rgba(255, 255, 255, 0.1)'}}>
+    <div className="flex" style={{ height: '100vh', overflow: 'hidden' }}>
+      <aside className="w-64 text-white flex flex-col fixed h-full z-10" style={{backgroundColor: 'var(--color-brand-blue)', overflowY: 'auto'}}>
+        <div className="p-6 border-b flex-shrink-0" style={{borderColor: 'rgba(255, 255, 255, 0.1)'}}>
           <h1 className="text-xl font-bold tracking-tight" style={{color: 'var(--color-brand-red)'}}>INTELFON SAC</h1>
           <p className="text-xs text-slate-300 mt-1 uppercase tracking-widest font-semibold">Gestión de Casos</p>
         </div>
         
-        <nav className="flex-1 mt-6 px-4 space-y-1">
+        <nav className="flex-1 mt-6 px-4 space-y-1 overflow-y-auto">
           {navItems.filter(item => item.roles.includes(user?.role as Role)).map((item) => (
             <button
               key={item.name}
@@ -89,7 +89,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           ))}
         </nav>
 
-        <div className="p-4 border-t" style={{borderColor: 'rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(15, 23, 42, 0.5)'}}>
+        <div className="p-4 border-t flex-shrink-0" style={{borderColor: 'rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(15, 23, 42, 0.5)'}}>
           <div className="flex items-center mb-4 px-2">
             <img 
               src={user?.avatar} 
@@ -113,14 +113,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </aside>
 
-      <main className="flex-1 ml-64 p-8">
-        <header className="mb-8">
+      <main className="flex-1 ml-64" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100vh', padding: '2rem' }}>
+        <header className="flex-shrink-0 mb-6">
           <h2 className="text-2xl font-black text-slate-800">
             {getPageTitle()}
           </h2>
           <p className="text-slate-500 text-sm">INTELFON SAC &bull; Centro de Soporte</p>
         </header>
-        {children}
+        <div style={{ flex: '1 1 auto', overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
+          {children}
+        </div>
       </main>
     </div>
   );

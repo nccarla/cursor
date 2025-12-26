@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 const VerifyCode: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -18,6 +19,27 @@ const VerifyCode: React.FC = () => {
     // Animación de entrada suave
     const timer = setTimeout(() => setIsEntering(false), 100);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Agregar animaciones del logo si no existen
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes logoFloat {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      @keyframes logoPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.9; }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
   }, []);
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -55,36 +77,40 @@ const VerifyCode: React.FC = () => {
   };
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center px-4 font-sans transition-all duration-500 ease-out bg-black"
-      style={{
-        opacity: isEntering ? 0 : 1,
-        transform: isEntering ? 'scale(1.05) translateY(20px)' : 'scale(1) translateY(0)',
-      }}
-    >
-      <div className="max-w-md w-full relative z-10">
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden bg-black">
+      {/* Fondo dinámico animado */}
+      <AnimatedBackground />
+      
+      {/* Contenedor del formulario con overlay para legibilidad */}
+      <div className="max-w-sm w-full relative z-10">
         <div 
-          className="bg-slate-900 rounded-3xl shadow-2xl p-10 text-center border border-slate-800 transition-all duration-500 ease-out"
+          className="bg-black/80 backdrop-blur-md rounded-3xl shadow-2xl p-6 text-center border border-black/50 transition-all duration-300 animate-in zoom-in-95 fade-in"
           style={{
             opacity: isEntering ? 0 : 1,
             transform: isEntering ? 'scale(0.9) translateY(30px)' : 'scale(1) translateY(0)',
           }}
         >
-          <div 
-            className="w-16 h-16 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 transition-all duration-500"
-            style={{
-              background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))',
-              boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)',
-              animation: isEntering ? 'none' : 'scaleInRotate 0.6s ease-out 0.2s both',
-            }}
-          >
-            <ShieldCheck className="w-8 h-8" />
+          {/* Logo de la Empresa */}
+          <div className="text-center mb-6 animate-in fade-in slide-in-from-top">
+            <div className="inline-flex items-center justify-center mb-6">
+              <img 
+                src="https://static.wixstatic.com/media/98a19d_504d5e7478054d2484448813ac235267~mv2.png/v1/fill/w_192,h_176,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/red256.png"
+                alt="INTELFON Logo"
+                className="w-24 h-24 object-contain animate-in scale-in fade-in"
+                style={{
+                  filter: 'drop-shadow(0 12px 30px rgba(200, 21, 27, 0.25))',
+                  animation: 'logoFloat 3s ease-in-out infinite, logoPulse 2s ease-in-out infinite',
+                  animationDelay: '0.2s, 0s'
+                }}
+              />
+            </div>
           </div>
+
           <h2 
-            className="text-3xl font-semibold mb-3 transition-all duration-500"
+            className="text-3xl font-semibold mb-3 animate-in slide-in-from-bottom fade-in transition-all duration-500"
             style={{
               color: 'var(--color-brand-red)',
-              animation: isEntering ? 'none' : 'slideInFromBottom 0.5s ease-out 0.3s both',
+              animationDelay: '100ms',
             }}
           >
             Verifica tu identidad

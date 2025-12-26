@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { Mail, ArrowLeft, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 const ForgotPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -54,17 +55,36 @@ const ForgotPassword: React.FC = () => {
     }
   };
 
+  // Agregar animaciones del logo si no existen
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes logoFloat {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      @keyframes logoPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.9; }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
+
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center px-4 bg-black transition-all duration-400 ease-in-out"
-      style={{
-        opacity: isExiting ? 0 : 1,
-        transform: isExiting ? 'scale(0.95) translateY(-20px)' : 'scale(1) translateY(0)',
-      }}
-    >
-      <div className="max-w-md w-full relative z-10">
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden bg-black">
+      {/* Fondo dinámico animado */}
+      <AnimatedBackground />
+      
+      {/* Contenedor del formulario con overlay para legibilidad */}
+      <div className="max-w-sm w-full relative z-10">
         <div 
-          className="bg-slate-900 rounded-3xl shadow-2xl p-10 border border-slate-800 transition-all duration-400 ease-in-out"
+          className="bg-black/80 backdrop-blur-md rounded-3xl shadow-2xl p-6 border border-black/50 transition-all duration-400 ease-in-out animate-in zoom-in-95 fade-in"
           style={{
             opacity: isExiting ? 0 : 1,
             transform: isExiting ? 'scale(0.95) translateY(-30px)' : 'scale(1) translateY(0)',
@@ -72,15 +92,28 @@ const ForgotPassword: React.FC = () => {
         >
           <Link 
             to="/login" 
-            className="inline-flex items-center text-sm font-bold text-slate-500 hover:text-slate-700 mb-8 transition-colors px-3 py-2 rounded-xl hover:bg-slate-50 animate-in fade-in slide-in-from-left"
+            className="inline-flex items-center text-sm font-bold text-slate-500 hover:text-slate-300 mb-8 transition-colors px-3 py-2 rounded-xl hover:bg-slate-800 animate-in fade-in slide-in-from-left"
           >
             <ArrowLeft className="w-4 h-4 mr-2" /> Volver al Login
           </Link>
 
-          <div className="mb-8 animate-in fade-in slide-in-from-top">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 animate-in scale-in fade-in animate-float" style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)'}}>
-              <Mail className="w-8 h-8 text-white" />
+          {/* Logo de la Empresa */}
+          <div className="text-center mb-6 animate-in fade-in slide-in-from-top">
+            <div className="inline-flex items-center justify-center mb-6">
+              <img 
+                src="https://static.wixstatic.com/media/98a19d_504d5e7478054d2484448813ac235267~mv2.png/v1/fill/w_192,h_176,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/red256.png"
+                alt="INTELFON Logo"
+                className="w-24 h-24 object-contain animate-in scale-in fade-in"
+                style={{
+                  filter: 'drop-shadow(0 12px 30px rgba(200, 21, 27, 0.25))',
+                  animation: 'logoFloat 3s ease-in-out infinite, logoPulse 2s ease-in-out infinite',
+                  animationDelay: '0.2s, 0s'
+                }}
+              />
             </div>
+          </div>
+
+          <div className="mb-6 animate-in fade-in slide-in-from-top">
             <h2 className="text-3xl font-semibold leading-tight mb-3 animate-in slide-in-from-bottom fade-in" style={{animationDelay: '100ms', color: 'var(--color-brand-red)'}}>¿Problemas para entrar?</h2>
             <p className="text-slate-300 mt-2 font-medium leading-relaxed animate-in slide-in-from-bottom fade-in" style={{animationDelay: '200ms'}}>
               Ingresa tu correo institucional y te enviaremos un código para restablecer tu contraseña.
@@ -98,7 +131,7 @@ const ForgotPassword: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ejemplo@intelfon.com"
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:bg-slate-750 transition-all font-medium"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:bg-slate-750 transition-all font-medium border-slate-700"
                   onFocus={(e) => {
                     e.target.style.borderColor = 'var(--color-brand-red)';
                     e.target.style.boxShadow = '0 0 0 4px rgba(200, 21, 27, 0.1)';

@@ -191,7 +191,7 @@ const Login: React.FC = () => {
       
       {/* Contenedor del formulario con overlay para legibilidad */}
       <div className="max-w-sm w-full relative z-10">
-        <div className="bg-black rounded-3xl shadow-2xl p-6 border border-black animate-in zoom-in-95 fade-in">
+        <div className="bg-black/80 backdrop-blur-md rounded-3xl shadow-2xl p-6 border border-black/50 animate-in zoom-in-95 fade-in">
           {/* Logo y Nombre de la Empresa */}
           <div className="text-center mb-6 animate-in fade-in slide-in-from-top">
             <div className="inline-flex items-center justify-center mb-3">
