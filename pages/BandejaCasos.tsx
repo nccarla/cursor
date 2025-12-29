@@ -22,7 +22,6 @@ const BandejaCasos: React.FC = () => {
   const [sortColumn, setSortColumn] = useState<SortColumn>('priority');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
-  const [expandedCaseId, setExpandedCaseId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -133,14 +132,6 @@ const BandejaCasos: React.FC = () => {
     return 'Hoy';
   };
 
-  const getSLAStatus = (caso: Case) => {
-    if (caso.slaExpired) return { text: 'SLA vencido', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' };
-    const diasAbierto = caso.diasAbierto || 0;
-    const slaDias = caso.categoria?.slaDias || 3;
-    const percent = (diasAbierto / slaDias) * 100;
-    if (percent >= 80) return { text: 'En riesgo', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' };
-    return { text: 'En tiempo', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' };
-  };
 
   const prioritizeCases = (casosList: Case[]): Case[] => {
     return [...casosList].sort((a, b) => {
@@ -292,43 +283,59 @@ const BandejaCasos: React.FC = () => {
       >
         {/* Barra superior de filtros operativos */}
         <div 
-          className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center p-6 rounded-3xl shadow-xl border backdrop-blur-sm bg-white"
+          className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center p-6 rounded-3xl shadow-xl border backdrop-blur-sm"
           style={{
-            borderColor: 'rgba(226, 232, 240, 0.6)',
+            backgroundColor: 'rgba(30, 41, 59, 0.4)',
+            borderColor: 'rgba(148, 163, 184, 0.15)',
             boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
           }}
         >
           <div className="relative flex-1 w-full max-w-md">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none" style={{color: '#94a3b8'}} />
             <input
               type="text"
               placeholder="Buscar por ID, Cliente o Asunto..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-14 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:bg-white transition-all text-sm font-medium shadow-sm hover:shadow-md"
+              className="w-full pl-14 pr-5 py-4 border rounded-2xl focus:outline-none focus:ring-4 transition-all text-sm font-medium shadow-sm hover:shadow-md"
               style={{
+                backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                borderColor: 'rgba(148, 163, 184, 0.3)',
+                color: '#ffffff',
                 '--tw-ring-color': 'var(--color-accent-blue)',
                 '--tw-ring-opacity': '0.2'
               } as React.CSSProperties & { '--tw-ring-color': string, '--tw-ring-opacity': string }}
               onFocus={(e) => {
                 e.target.style.borderColor = 'var(--color-accent-blue)';
                 e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.15)';
+                e.target.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(226, 232, 240, 0.6)';
+                e.target.style.borderColor = 'rgba(148, 163, 184, 0.3)';
                 e.target.style.boxShadow = '';
+                e.target.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
               }}
             />
           </div>
           
           <div className="flex gap-3 w-full md:w-auto flex-wrap">
             <div className="relative group">
-              <Filter className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none transition-colors" />
+              <Filter className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none transition-colors" style={{color: '#94a3b8'}} />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="pl-14 pr-10 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none transition-all text-sm font-medium appearance-none cursor-pointer shadow-sm hover:bg-white hover:shadow-md"
-                style={{color: 'var(--color-slate-700)'}}
+                className="pl-14 pr-10 py-4 border rounded-2xl focus:outline-none transition-all text-sm font-medium appearance-none cursor-pointer shadow-sm hover:shadow-md"
+                style={{
+                  backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                  borderColor: 'rgba(148, 163, 184, 0.3)',
+                  color: '#cbd5e1'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                }}
               >
                 <option value="all">Todos los Estados</option>
                 {Object.values(CaseStatus).map(s => <option key={s} value={s}>{s}</option>)}
@@ -350,9 +357,27 @@ const BandejaCasos: React.FC = () => {
             onClick={() => setQuickFilter('all')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border-2 ${
               quickFilter === 'all'
-                ? 'bg-slate-800 text-white border-slate-800 shadow-md'
-                : 'bg-white text-slate-700 border-2 border-slate-300 hover:border-slate-400'
+                ? 'text-white border shadow-md'
+                : 'border-slate-600'
             }`}
+            style={quickFilter === 'all' ? {
+              backgroundColor: 'rgb(15, 23, 42)',
+              borderColor: 'rgb(15, 23, 42)'
+            } : {
+              backgroundColor: 'transparent',
+              color: '#cbd5e1',
+              borderColor: 'rgba(148, 163, 184, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              if (quickFilter !== 'all') {
+                e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (quickFilter !== 'all') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
           >
             Todos
           </button>
@@ -360,9 +385,27 @@ const BandejaCasos: React.FC = () => {
             onClick={() => setQuickFilter('escalados')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border-2 flex items-center gap-2 ${
               quickFilter === 'escalados'
-                ? 'bg-red-600 text-white border-red-600 shadow-md'
-                : 'bg-white text-red-700 border-2 border-red-300 hover:border-red-400'
+                ? 'text-white border shadow-md'
+                : ''
             }`}
+            style={quickFilter === 'escalados' ? {
+              backgroundColor: 'var(--color-brand-red)',
+              borderColor: 'var(--color-brand-red)'
+            } : {
+              backgroundColor: 'transparent',
+              color: '#f87171',
+              borderColor: 'rgba(200, 21, 27, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              if (quickFilter !== 'escalados') {
+                e.currentTarget.style.backgroundColor = 'rgba(200, 21, 27, 0.1)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (quickFilter !== 'escalados') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
           >
             <AlertTriangle className="w-4 h-4" />
             Escalados {filterCounts.escalados > 0 && `(${filterCounts.escalados})`}
@@ -371,9 +414,27 @@ const BandejaCasos: React.FC = () => {
             onClick={() => setQuickFilter('vencidos')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border-2 flex items-center gap-2 ${
               quickFilter === 'vencidos'
-                ? 'bg-amber-600 text-white border-amber-600 shadow-md'
-                : 'bg-white text-amber-700 border-2 border-amber-300 hover:border-amber-400'
+                ? 'text-white border shadow-md'
+                : ''
             }`}
+            style={quickFilter === 'vencidos' ? {
+              backgroundColor: '#f59e0b',
+              borderColor: '#f59e0b'
+            } : {
+              backgroundColor: 'transparent',
+              color: '#fbbf24',
+              borderColor: 'rgba(245, 158, 11, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              if (quickFilter !== 'vencidos') {
+                e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.1)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (quickFilter !== 'vencidos') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
           >
             <Clock className="w-4 h-4" />
             Fuera de SLA {filterCounts.vencidos > 0 && `(${filterCounts.vencidos})`}
@@ -382,22 +443,51 @@ const BandejaCasos: React.FC = () => {
             onClick={() => setQuickFilter('nuevos')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all border-2 flex items-center gap-2 ${
               quickFilter === 'nuevos'
-                ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                : 'bg-white text-slate-700 border-2 border-slate-300 hover:border-slate-400'
+                ? 'text-white border shadow-md'
+                : 'border-slate-600'
             }`}
+            style={quickFilter === 'nuevos' ? {
+              backgroundColor: 'var(--color-accent-blue)',
+              borderColor: 'var(--color-accent-blue)'
+            } : {
+              backgroundColor: 'transparent',
+              color: '#cbd5e1',
+              borderColor: 'rgba(148, 163, 184, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              if (quickFilter !== 'nuevos') {
+                e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (quickFilter !== 'nuevos') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
           >
             <CheckCircle2 className="w-4 h-4" />
             Nuevos {filterCounts.nuevos > 0 && `(${filterCounts.nuevos})`}
           </button>
           
           {/* Última actualización */}
-          <div className="ml-auto flex items-center gap-2 text-xs text-slate-500">
+          <div className="ml-auto flex items-center gap-2 text-xs" style={{color: '#94a3b8'}}>
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Actualizado: {lastUpdate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
             <button
               onClick={loadCasos}
               disabled={loading}
-              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+              className="p-1.5 rounded-lg transition-colors disabled:opacity-50"
+              style={{color: '#94a3b8'}}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.color = '#cbd5e1';
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#94a3b8';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
               title="Actualizar"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -407,30 +497,30 @@ const BandejaCasos: React.FC = () => {
       </div>
 
       {loading && casos.length === 0 ? (
-        <div className="bg-white rounded-3xl shadow-xl border overflow-hidden" style={{borderColor: 'rgba(226, 232, 240, 0.6)'}}>
+        <div className="rounded-3xl shadow-xl border overflow-hidden" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-gradient-to-r from-slate-50 via-slate-50 to-slate-100/80 border-b" style={{borderColor: 'rgba(226, 232, 240, 0.6)'}}>
+              <thead className="border-b" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
                 <tr>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">ID Caso</th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">Cliente</th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">Categoría</th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">Estado</th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">Agente</th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">Tiempo</th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase text-right">Acción</th>
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>ID Caso</th>
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>Cliente</th>
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>Categoría</th>
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>Estado</th>
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>Agente</th>
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>Tiempo</th>
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase text-right" style={{color: '#cbd5e1'}}>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {[1, 2, 3].map(i => (
-                  <tr key={i} className="border-b animate-pulse" style={{borderColor: 'rgba(226, 232, 240, 0.3)'}}>
-                    <td className="px-6 py-5"><div className="h-4 bg-slate-200 rounded w-24"></div></td>
-                    <td className="px-6 py-5"><div className="h-4 bg-slate-200 rounded w-32"></div></td>
-                    <td className="px-6 py-5"><div className="h-6 bg-slate-200 rounded w-20"></div></td>
-                    <td className="px-6 py-5"><div className="h-6 bg-slate-200 rounded w-24"></div></td>
-                    <td className="px-6 py-5"><div className="h-4 bg-slate-200 rounded w-20"></div></td>
-                    <td className="px-6 py-5"><div className="h-4 bg-slate-200 rounded w-16"></div></td>
-                    <td className="px-6 py-5 text-right"><div className="h-8 bg-slate-200 rounded w-8 ml-auto"></div></td>
+                  <tr key={i} className="border-b animate-pulse" style={{borderColor: 'rgba(148, 163, 184, 0.15)'}}>
+                    <td className="px-6 py-5"><div className="h-4 rounded w-24" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div></td>
+                    <td className="px-6 py-5"><div className="h-4 rounded w-32" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div></td>
+                    <td className="px-6 py-5"><div className="h-6 rounded w-20" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div></td>
+                    <td className="px-6 py-5"><div className="h-6 rounded w-24" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div></td>
+                    <td className="px-6 py-5"><div className="h-4 rounded w-20" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div></td>
+                    <td className="px-6 py-5"><div className="h-4 rounded w-16" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div></td>
+                    <td className="px-6 py-5 text-right"><div className="h-8 rounded w-8 ml-auto" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div></td>
                   </tr>
                 ))}
               </tbody>
@@ -438,39 +528,53 @@ const BandejaCasos: React.FC = () => {
           </div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-3xl shadow-xl border p-16 text-center" style={{borderColor: 'rgba(226, 232, 240, 0.6)', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'}}>
-          <div className="w-24 h-24 bg-gradient-to-br from-slate-100 to-slate-200 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <Search className="w-12 h-12 text-slate-400" />
+        <div className="rounded-3xl shadow-xl border p-16 text-center" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'}}>
+          <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)'}}>
+            <Search className="w-12 h-12" style={{color: '#94a3b8'}} />
           </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">No se encontraron casos</h3>
-          <p className="text-slate-500 text-sm font-medium mb-6">Intenta ajustar los filtros de búsqueda</p>
+          <h3 className="text-xl font-bold mb-2" style={{color: '#ffffff'}}>No se encontraron casos</h3>
+          <p className="text-sm font-medium mb-6" style={{color: '#94a3b8'}}>Intenta ajustar los filtros de búsqueda</p>
           <button
             onClick={() => {
               setSearchTerm('');
               setStatusFilter('all');
               setQuickFilter('all');
             }}
-            className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors"
+            className="px-6 py-3 rounded-xl text-sm font-semibold transition-colors"
+            style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', color: '#cbd5e1'}}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+            }}
           >
             Limpiar filtros
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-3xl shadow-xl border overflow-hidden" style={{borderColor: 'rgba(226, 232, 240, 0.6)', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'}}>
+        <div className="rounded-3xl shadow-xl border overflow-hidden" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'}}>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead 
                 ref={tableHeaderRef}
-                className={`bg-gradient-to-r from-slate-50 via-slate-50 to-slate-100/80 border-b transition-all ${
+                className={`border-b transition-all ${
                   isSticky ? 'sticky top-0 z-20 shadow-md' : ''
                 }`}
-                style={{borderColor: 'rgba(226, 232, 240, 0.6)'}}
+                style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.15)'}}
               >
                 <tr>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>
                     <button 
                       onClick={() => handleSort('priority')}
-                      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
+                      className="flex items-center gap-1 transition-colors"
+                      style={{color: '#cbd5e1'}}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#ffffff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#cbd5e1';
+                      }}
                     >
                       ID Caso
                       {sortColumn === 'priority' && (
@@ -478,10 +582,17 @@ const BandejaCasos: React.FC = () => {
                       )}
                     </button>
                   </th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>
                     <button 
                       onClick={() => handleSort('cliente')}
-                      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
+                      className="flex items-center gap-1 transition-colors"
+                      style={{color: '#cbd5e1'}}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#ffffff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#cbd5e1';
+                      }}
                     >
                       Cliente
                       {sortColumn === 'cliente' && (
@@ -489,11 +600,18 @@ const BandejaCasos: React.FC = () => {
                       )}
                     </button>
                   </th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">Categoría</th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>Categoría</th>
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>
                     <button 
                       onClick={() => handleSort('estado')}
-                      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
+                      className="flex items-center gap-1 transition-colors"
+                      style={{color: '#cbd5e1'}}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#ffffff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#cbd5e1';
+                      }}
                       title="Ordenar por estado del caso"
                     >
                       Estado
@@ -502,10 +620,17 @@ const BandejaCasos: React.FC = () => {
                       )}
                     </button>
                   </th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>
                     <button 
                       onClick={() => handleSort('agent')}
-                      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
+                      className="flex items-center gap-1 transition-colors"
+                      style={{color: '#cbd5e1'}}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#ffffff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#cbd5e1';
+                      }}
                     >
                       Agente
                       {sortColumn === 'agent' && (
@@ -513,10 +638,17 @@ const BandejaCasos: React.FC = () => {
                       )}
                     </button>
                   </th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase">
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase" style={{color: '#cbd5e1'}}>
                     <button 
                       onClick={() => handleSort('createdAt')}
-                      className="flex items-center gap-1 hover:text-slate-900 transition-colors"
+                      className="flex items-center gap-1 transition-colors"
+                      style={{color: '#cbd5e1'}}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#ffffff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = '#cbd5e1';
+                      }}
                       title="Días desde la creación del caso"
                     >
                       Tiempo Abierto
@@ -525,121 +657,167 @@ const BandejaCasos: React.FC = () => {
                       )}
                     </button>
                   </th>
-                  <th className="px-6 py-5 text-xs font-bold text-slate-700 tracking-wide uppercase text-right">Acción</th>
+                  <th className="px-6 py-5 text-xs font-bold tracking-wide uppercase text-right" style={{color: '#cbd5e1'}}>Acción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y" style={{borderColor: 'rgba(226, 232, 240, 0.3)'}}>
+              <tbody className="divide-y" style={{borderColor: 'rgba(148, 163, 184, 0.15)'}}>
                 {filtered.map((caso, idx) => {
                   const priority = getRowPriority(caso);
-                  const slaStatus = getSLAStatus(caso);
                   const isHovered = hoveredRowId === caso.id;
-                  const isExpanded = expandedCaseId === caso.id;
                   const status = caso.status || (caso as any).estado;
+                  const slaDias = caso.categoria?.slaDias || 3;
+                  const diasAbierto = caso.diasAbierto || 0;
                   
                   return (
                     <React.Fragment key={caso.id}>
                       <tr 
-                        className="transition-all duration-200 cursor-pointer group relative hover:bg-slate-50/80"
+                        className="transition-all duration-200 cursor-pointer group relative"
                         style={{
+                          backgroundColor: isHovered ? 'rgba(30, 41, 59, 0.6)' : 'transparent',
                           borderLeft: priority === 'critical' 
-                            ? '4px solid #dc2626' 
-                            : priority === 'warning' 
-                            ? '4px solid #f59e0b' 
+                            ? '4px solid var(--color-brand-red)' 
+                            : priority === 'warning'
+                            ? '4px solid #f59e0b'
                             : '4px solid transparent'
                         }}
                         onMouseEnter={() => setHoveredRowId(caso.id)}
                         onMouseLeave={() => setHoveredRowId(null)}
                         onClick={() => {
-                          setExpandedCaseId(isExpanded ? null : caso.id);
+                          navigate(`/app/casos/${caso.id}`);
                         }}
                       >
                       <td className="px-6 py-5">
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-bold text-slate-900 group-hover:text-accent-blue transition-colors">
+                          <span className="text-sm font-bold transition-colors" style={{color: '#ffffff'}}>
                             {caso.ticketNumber || (caso as any).idCaso}
                           </span>
                           {caso.subject && (
-                            <span className="text-xs text-slate-500 truncate max-w-xs" title={caso.subject}>
+                            <span className="text-xs truncate max-w-xs" style={{color: '#94a3b8'}} title={caso.subject}>
                               {caso.subject}
                             </span>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="text-sm font-semibold text-slate-800">{caso.clientName || caso.cliente?.nombreEmpresa}</span>
+                        <span className="text-sm font-semibold" style={{color: '#cbd5e1'}}>{caso.clientName || caso.cliente?.nombreEmpresa}</span>
                       </td>
                       <td className="px-6 py-5">
-                        <span className="inline-flex items-center text-xs font-semibold px-3.5 py-2 bg-slate-100 text-slate-700 rounded-xl border border-slate-200 shadow-sm">
+                        <span className="inline-flex items-center text-xs font-semibold px-3.5 py-2 rounded-xl border shadow-sm" style={{
+                          backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                          color: '#cbd5e1',
+                          borderColor: 'rgba(148, 163, 184, 0.2)'
+                        }}>
                           {caso.category || caso.categoria?.nombre}
                         </span>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="flex flex-col gap-1.5">
-                          <span className={`inline-flex items-center text-xs font-bold px-3.5 py-2 rounded-xl border shadow-sm w-fit ${STATE_COLORS[status as CaseStatus]}`}>
-                            {status}
-                          </span>
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            {slaStatus && slaStatus.text !== 'En tiempo' && (
-                              <>
-                                <Clock className="w-3 h-3 flex-shrink-0" />
-                                <span className={slaStatus.text === 'SLA vencido' ? 'text-red-600 font-medium' : 'text-amber-600 font-medium'}>
-                                  {slaStatus.text}
-                                </span>
-                                {caso.diasAbierto !== undefined && <span>·</span>}
-                              </>
-                            )}
-                            {caso.diasAbierto !== undefined && (
-                              <span>{caso.diasAbierto} día{caso.diasAbierto !== 1 ? 's' : ''} abierto</span>
-                            )}
+                        <div className="relative group/estado">
+                          <div className="flex flex-col gap-1.5">
+                            <span className={`inline-flex items-center text-xs font-bold px-3.5 py-2 rounded-md border w-fit ${STATE_COLORS[status as CaseStatus]}`}>
+                              {status}
+                            </span>
+                            <div className="flex items-center gap-1.5 text-xs" style={{color: '#94a3b8'}}>
+                              {caso.slaExpired && (
+                                <>
+                                  <Clock className="w-3 h-3 flex-shrink-0" style={{color: '#f87171'}} />
+                                  <span className="font-medium" style={{color: '#f87171'}}>
+                                    SLA vencido
+                                  </span>
+                                  {diasAbierto > 0 && <span>·</span>}
+                                </>
+                              )}
+                              {!caso.slaExpired && diasAbierto > 0 && diasAbierto >= slaDias * 0.8 && (
+                                <>
+                                  <Clock className="w-3 h-3 flex-shrink-0" style={{color: '#fbbf24'}} />
+                                  <span className="font-medium" style={{color: '#fbbf24'}}>
+                                    En riesgo
+                                  </span>
+                                  <span>·</span>
+                                </>
+                              )}
+                              {diasAbierto > 0 && (
+                                <span>{diasAbierto} día{diasAbierto !== 1 ? 's' : ''}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover/estado:opacity-100 transition-opacity pointer-events-none">
+                            SLA: {slaDias} días · {diasAbierto} día{diasAbierto !== 1 ? 's' : ''} abierto
+                            {caso.slaExpired && ' · Vencido'}
+                            {!caso.slaExpired && diasAbierto >= slaDias * 0.8 && ' · En riesgo'}
+                            <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-900"></div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
                         {caso.agentName ? (
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center font-bold text-xs">
-                                {caso.agentName.charAt(0)}
+                          <div className="relative group/agent">
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                                  {caso.agentName.charAt(0)}
+                                </div>
+                                <span className="text-sm font-semibold" style={{color: '#ffffff'}}>{caso.agentName}</span>
                               </div>
-                              <span className="text-sm font-medium text-slate-700">{caso.agentName}</span>
+                              {caso.agenteAsignado?.casosActivos !== undefined && (
+                                <span className="text-xs ml-10 font-medium" style={{color: '#94a3b8'}}>
+                                  {caso.agenteAsignado.casosActivos} activo{caso.agenteAsignado.casosActivos !== 1 ? 's' : ''}
+                                </span>
+                              )}
                             </div>
                             {caso.agenteAsignado?.casosActivos !== undefined && (
-                              <span className="text-xs text-slate-500 ml-10">
-                                {caso.agenteAsignado.casosActivos} activo{caso.agenteAsignado.casosActivos !== 1 ? 's' : ''}
-                              </span>
+                              <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover/agent:opacity-100 transition-opacity pointer-events-none">
+                                {caso.agentName} tiene {caso.agenteAsignado.casosActivos} caso{caso.agenteAsignado.casosActivos !== 1 ? 's' : ''} activo{caso.agenteAsignado.casosActivos !== 1 ? 's' : ''}
+                                <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-900"></div>
+                              </div>
                             )}
                           </div>
                         ) : (
-                          <span className="text-sm text-slate-400 italic">Sin asignar</span>
+                          <span className="text-sm italic" style={{color: '#64748b'}}>Sin asignar</span>
                         )}
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex flex-col gap-1">
                           {caso.diasAbierto !== undefined && (
-                            <span className={`text-sm font-bold ${
-                              caso.diasAbierto >= 4 ? 'text-red-600' : caso.diasAbierto >= 2 ? 'text-amber-600' : 'text-green-600'
-                            }`}>
+                            <span className="text-sm font-bold" style={{
+                              color: caso.slaExpired || (caso.status || (caso as any).estado) === CaseStatus.ESCALADO
+                                ? 'var(--color-brand-red)'
+                                : caso.categoria?.slaDias && caso.diasAbierto >= caso.categoria.slaDias * 0.8
+                                ? '#f59e0b'
+                                : '#22c55e'
+                            }}>
                               {caso.diasAbierto} día{caso.diasAbierto !== 1 ? 's' : ''}
                             </span>
                           )}
                           {caso.createdAt && (
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs font-medium" style={{color: '#94a3b8'}}>
                               {new Date(caso.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                             </span>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1">
                           {/* Acciones rápidas solo visibles en hover */}
                           {isHovered && (
-                            <>
+                            <div className="flex items-center gap-1 rounded-lg p-1 border" style={{
+                              backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                              borderColor: 'rgba(148, 163, 184, 0.2)'
+                            }}>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   navigate(`/app/casos/${caso.id}`);
                                 }}
-                                className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-all shadow-sm"
+                                className="p-2 rounded-md transition-all"
+                                style={{color: '#94a3b8'}}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = '#cbd5e1';
+                                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = '#94a3b8';
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
                                 title="Ver detalle"
                               >
                                 <Eye className="w-4 h-4" />
@@ -649,7 +827,16 @@ const BandejaCasos: React.FC = () => {
                                   e.stopPropagation();
                                   // Reasignar lógica aquí
                                 }}
-                                className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all shadow-sm"
+                                className="p-2 rounded-md transition-all"
+                                style={{color: '#94a3b8'}}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = '#cbd5e1';
+                                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = '#94a3b8';
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
                                 title="Reasignar agente"
                               >
                                 <UserCheck className="w-4 h-4" />
@@ -660,61 +847,34 @@ const BandejaCasos: React.FC = () => {
                                     e.stopPropagation();
                                     // Escalar lógica aquí
                                   }}
-                                  className="p-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 transition-all shadow-sm"
+                                  className="p-2 rounded-md transition-all"
                                   title="Escalar caso"
+                                  style={{
+                                    color: '#f87171'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'rgba(200, 21, 27, 0.2)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                  }}
                                 >
                                   <ArrowUpRight className="w-4 h-4" />
                                 </button>
                               )}
-                            </>
+                            </div>
                           )}
-                          <div className={`p-2 rounded-xl transition-all ${
-                            isHovered || isExpanded ? 'bg-accent-blue/10' : 'bg-slate-100 group-hover:bg-slate-200'
-                          }`}>
-                            {isExpanded ? (
-                              <ChevronDown className="w-5 h-5 transition-all" style={{
-                                color: 'var(--color-accent-blue)'
-                              }} />
-                            ) : (
-                              <ChevronRight className="w-5 h-5 transition-all" style={{
-                                color: isHovered ? 'var(--color-accent-blue)' : 'var(--color-slate-400)',
-                                transform: isHovered ? 'translateX(4px)' : ''
-                              }} />
-                            )}
+                          <div className="p-2 rounded-lg transition-all" style={{
+                            backgroundColor: isHovered ? 'rgba(148, 163, 184, 0.2)' : 'transparent'
+                          }}>
+                            <ChevronRight className="w-5 h-5 transition-all" style={{
+                              color: isHovered ? '#94a3b8' : '#64748b',
+                              transform: isHovered ? 'translateX(4px)' : ''
+                            }} />
                           </div>
                         </div>
                       </td>
                     </tr>
-                    {isExpanded && (
-                      <tr className="bg-slate-50/50">
-                        <td colSpan={7} className="px-6 py-4 border-t border-slate-200">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <p className="text-sm text-slate-600 mb-2">
-                                <span className="font-semibold">Descripción:</span> {caso.description || 'Sin descripción'}
-                              </p>
-                              <div className="flex items-center gap-4 text-xs text-slate-500">
-                                {caso.createdAt && (
-                                  <span>Creado: {new Date(caso.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                                )}
-                                {caso.clientEmail && <span>Email: {caso.clientEmail}</span>}
-                                {caso.clientPhone && <span>Tel: {caso.clientPhone}</span>}
-                              </div>
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/app/casos/${caso.id}`);
-                              }}
-                              className="ml-4 px-4 py-2 bg-accent-blue text-white rounded-xl text-sm font-semibold hover:bg-accent-blue/90 transition-colors flex items-center gap-2"
-                            >
-                              <Eye className="w-4 h-4" />
-                              Ver Detalle Completo
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                     </React.Fragment>
                   );
                 })}

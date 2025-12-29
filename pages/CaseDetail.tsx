@@ -172,7 +172,7 @@ const CaseDetail: React.FC = () => {
     <div className="min-h-[400px] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin" style={{borderColor: 'var(--color-accent-blue)'}}></div>
-        <p className="text-slate-400 font-medium tracking-normal text-xs">Cargando Detalle...</p>
+        <p className="font-medium tracking-normal text-xs" style={{color: '#94a3b8'}}>Cargando Detalle...</p>
       </div>
     </div>
   );
@@ -213,8 +213,10 @@ const CaseDetail: React.FC = () => {
     <div className="max-w-6xl mx-auto" style={{ paddingBottom: '2rem' }}>
       <div 
         ref={headerRef}
-        className={`sticky top-0 z-40 bg-white transition-all ${isHeaderSticky ? 'shadow-md border-b-2 border-slate-200' : ''}`}
+        className={`sticky top-0 z-40 transition-all ${isHeaderSticky ? 'shadow-md border-b-2' : ''}`}
         style={{ 
+          backgroundColor: 'rgba(30, 41, 59, 0.95)',
+          borderColor: 'rgba(148, 163, 184, 0.15)',
           marginLeft: '-2rem', 
           marginRight: '-2rem', 
           paddingLeft: '2rem', 
@@ -225,7 +227,16 @@ const CaseDetail: React.FC = () => {
       >
         <button 
           onClick={() => navigate(-1)}
-          className={`flex items-center text-slate-600 hover:text-slate-900 font-bold transition-colors mb-4 group px-4 py-2 rounded-xl hover:bg-slate-100 ${isHeaderSticky ? '' : 'mb-2'}`}
+          className={`flex items-center font-bold transition-colors mb-4 group px-4 py-2 rounded-xl ${isHeaderSticky ? '' : 'mb-2'}`}
+          style={{color: '#cbd5e1'}}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#ffffff';
+            e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = '#cbd5e1';
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
         >
           <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" /> Volver
         </button>
@@ -235,16 +246,18 @@ const CaseDetail: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {/* Encabezado del caso */}
           <section 
-            className={`bg-white rounded-2xl shadow-sm border-2 overflow-hidden transition-all ${
-              isCritical ? 'border-red-300 shadow-red-100/50' : 'border-slate-200/50'
-            }`}
-            style={isCritical ? { borderTop: '4px solid #dc2626' } : {}}
+            className="rounded-2xl shadow-sm border-2 overflow-hidden transition-all"
+            style={{
+              backgroundColor: 'rgba(30, 41, 59, 0.4)',
+              borderColor: isCritical ? 'rgba(220, 38, 38, 0.3)' : 'rgba(148, 163, 184, 0.15)',
+              borderTop: isCritical ? '4px solid #dc2626' : undefined
+            }}
           >
             {isCritical && (
-              <div className="bg-red-50 border-b-2 border-red-200 px-8 py-3">
+              <div className="border-b-2 px-8 py-3" style={{backgroundColor: 'rgba(220, 38, 38, 0.15)', borderColor: 'rgba(220, 38, 38, 0.3)'}}>
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
-                  <p className="text-sm font-semibold text-red-700">
+                  <AlertTriangle className="w-5 h-5" style={{color: '#f87171'}} />
+                  <p className="text-sm font-semibold" style={{color: '#f87171'}}>
                     {isEscalado && caso.slaExpired && 'Caso escalado y SLA vencido'}
                     {isEscalado && !caso.slaExpired && 'Caso escalado - Requiere atención inmediata'}
                     {!isEscalado && caso.slaExpired && slaData && `SLA vencido hace ${formatTimeAgo(slaData.overdueHours)}`}
@@ -253,36 +266,39 @@ const CaseDetail: React.FC = () => {
               </div>
             )}
 
-            <div className="p-8 border-b-2 border-slate-100 bg-gradient-to-r from-slate-50 to-white flex justify-between items-start">
+            <div className="p-8 border-b-2 flex justify-between items-start" style={{borderColor: 'rgba(148, 163, 184, 0.15)'}}>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4 flex-wrap">
-                  <span className="text-4xl font-semibold text-slate-900 tracking-tight">{caso.ticketNumber}</span>
+                  <span className="text-4xl font-semibold tracking-tight" style={{color: '#ffffff'}}>{caso.ticketNumber}</span>
                   <span className={`px-4 py-2 rounded-full text-xs font-semibold border-2 shadow-sm ${STATE_COLORS[caso.status as CaseStatus]}`}>
                     {caso.status}
                   </span>
                 </div>
-                <h1 className="text-2xl font-semibold text-slate-900 leading-tight">{caso.subject}</h1>
+                <h1 className="text-2xl font-semibold leading-tight" style={{color: '#ffffff'}}>{caso.subject}</h1>
               </div>
             </div>
 
             {/* Información de SLA ampliada */}
             {slaData && (
-              <div className="p-8 border-b-2 border-slate-100 bg-gradient-to-r from-slate-50/50 to-white">
+              <div className="p-8 border-b-2" style={{borderColor: 'rgba(148, 163, 184, 0.15)'}}>
                 <div className="flex items-center gap-2 mb-4">
                   <Clock className="w-5 h-5" style={{color: 'var(--color-accent-blue)'}} />
-                  <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Información SLA</h3>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider" style={{color: '#cbd5e1'}}>Información SLA</h3>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-white p-4 rounded-xl border border-slate-200">
-                    <p className="text-xs text-slate-500 font-medium mb-1">SLA Comprometido</p>
-                    <p className="text-lg font-bold text-slate-900">{slaData.slaHours}h ({caso.categoria?.slaDias || 0} días)</p>
+                  <div className="p-4 rounded-xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
+                    <p className="text-xs font-medium mb-1" style={{color: '#94a3b8'}}>SLA Comprometido</p>
+                    <p className="text-lg font-bold" style={{color: '#ffffff'}}>{slaData.slaHours}h ({caso.categoria?.slaDias || 0} días)</p>
                   </div>
-                  <div className={`p-4 rounded-xl border ${slaData.isOverdue ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200'}`}>
-                    <p className="text-xs font-medium mb-1" style={slaData.isOverdue ? {color: '#991b1b'} : {color: '#64748b'}}>
+                  <div className={`p-4 rounded-xl border ${slaData.isOverdue ? '' : ''}`} style={{
+                    backgroundColor: slaData.isOverdue ? 'rgba(220, 38, 38, 0.15)' : 'rgba(30, 41, 59, 0.6)',
+                    borderColor: slaData.isOverdue ? 'rgba(220, 38, 38, 0.3)' : 'rgba(148, 163, 184, 0.2)'
+                  }}>
+                    <p className="text-xs font-medium mb-1" style={{color: slaData.isOverdue ? '#f87171' : '#94a3b8'}}>
                       Tiempo Transcurrido
                     </p>
-                    <p className={`text-lg font-bold ${slaData.isOverdue ? 'text-red-700' : 'text-slate-900'}`}>
+                    <p className="text-lg font-bold" style={{color: slaData.isOverdue ? '#f87171' : '#ffffff'}}>
                       {slaData.elapsedHours}h ({Math.floor(slaData.elapsedHours / 24)} días)
                     </p>
                   </div>
@@ -291,14 +307,14 @@ const CaseDetail: React.FC = () => {
                 {/* Barra de progreso SLA */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-xs font-medium">
-                    <span className={slaData.isOverdue ? 'text-red-600' : 'text-slate-600'}>
+                    <span style={{color: slaData.isOverdue ? '#f87171' : '#94a3b8'}}>
                       {slaData.isOverdue ? `Excedido: +${formatTimeAgo(slaData.overdueHours)}` : `Restante: ${formatTimeAgo(slaData.remainingHours)}`}
                     </span>
-                    <span className={slaData.isOverdue ? 'text-red-600 font-bold' : 'text-slate-600'}>
+                    <span style={{color: slaData.isOverdue ? '#f87171' : '#94a3b8', fontWeight: slaData.isOverdue ? 'bold' : 'normal'}}>
                       {slaData.progressPercent.toFixed(0)}%
                     </span>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                  <div className="w-full rounded-full h-3 overflow-hidden" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}>
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
                         slaData.isOverdue 
@@ -315,24 +331,28 @@ const CaseDetail: React.FC = () => {
             )}
 
             <div className="p-8">
-              <h3 className="text-sm font-semibold text-slate-700 tracking-normal mb-4 flex items-center gap-2">
+              <h3 className="text-sm font-semibold tracking-normal mb-4 flex items-center gap-2" style={{color: '#cbd5e1'}}>
                 <MessageSquare className="w-5 h-5" style={{color: 'var(--color-accent-blue)'}} /> Descripción del Caso
               </h3>
-              <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 p-6 rounded-2xl border-2 border-slate-200 text-slate-700 leading-relaxed font-medium shadow-sm">
+              <div className="p-6 rounded-2xl border-2 leading-relaxed font-medium shadow-sm" style={{
+                backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                borderColor: 'rgba(148, 163, 184, 0.2)',
+                color: '#cbd5e1'
+              }}>
                 {caso.description}
               </div>
             </div>
 
             {/* Acciones reorganizadas por categorías */}
-            <div className="p-8 border-t-2 border-slate-100 bg-gradient-to-r from-slate-50/30 to-slate-100/30">
-              <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-5 flex items-center gap-2">
+            <div className="p-8 border-t-2" style={{borderColor: 'rgba(148, 163, 184, 0.15)'}}>
+              <h3 className="text-sm font-black uppercase tracking-wider mb-5 flex items-center gap-2" style={{color: '#ffffff'}}>
                 <CheckCircle2 className="w-5 h-5" style={{color: 'var(--color-accent-blue)'}} /> Acciones Disponibles
               </h3>
               
               {/* Cambiar Estado */}
               {stateTransitionActions.cambiarEstado.length > 0 && (
                 <div className="mb-6">
-                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Cambiar Estado</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{color: '#94a3b8'}}>Cambiar Estado</p>
                   <div className="flex flex-wrap gap-3">
                     {stateTransitionActions.cambiarEstado.map(st => {
                       const onClick = () => {
@@ -404,19 +424,19 @@ const CaseDetail: React.FC = () => {
               </div>
 
               {validTransitions.length === 0 && !stateTransitionActions.escalar && !stateTransitionActions.reasignar && !stateTransitionActions.cerrar && (
-                <div className="w-full p-4 bg-slate-100 rounded-xl border border-slate-200">
-                  <p className="text-slate-500 text-sm font-medium text-center">Caso en estado final ({caso.status}).</p>
+                <div className="w-full p-4 rounded-xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
+                  <p className="text-sm font-medium text-center" style={{color: '#94a3b8'}}>Caso en estado final ({caso.status}).</p>
                 </div>
               )}
             </div>
           </section>
 
           {/* Timeline / Historial */}
-          <section className="bg-white rounded-2xl shadow-sm border-2 border-slate-200/50 overflow-hidden">
-            <div className="p-8 border-b-2 border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+          <section className="rounded-2xl shadow-sm border-2 overflow-hidden" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
+            <div className="p-8 border-b-2" style={{borderColor: 'rgba(148, 163, 184, 0.15)'}}>
               <div className="flex items-center gap-2">
                 <History className="w-5 h-5" style={{color: 'var(--color-accent-blue)'}} />
-                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Historial del Caso</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider" style={{color: '#cbd5e1'}}>Historial del Caso</h3>
               </div>
             </div>
             
@@ -424,7 +444,7 @@ const CaseDetail: React.FC = () => {
               {timelineEvents.length > 0 ? (
                 <div className="relative">
                   {/* Línea vertical del timeline */}
-                  <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+                  <div className="absolute left-6 top-0 bottom-0 w-0.5" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
                   
                   <div className="space-y-6">
                     {timelineEvents.map((event, idx) => {
@@ -435,27 +455,27 @@ const CaseDetail: React.FC = () => {
                           case 'cambio_estado': return <TrendingUp className="w-4 h-4 text-amber-600" />;
                           case 'escalamiento': return <AlertTriangle className="w-4 h-4 text-red-600" />;
                           case 'resolucion': return <CheckCircle2 className="w-4 h-4 text-green-600" />;
-                          default: return <MessageSquare className="w-4 h-4 text-slate-600" />;
+                          default: return <MessageSquare className="w-4 h-4" style={{color: '#94a3b8'}} />;
                         }
                       };
 
                       return (
                         <div key={idx} className="relative flex gap-4">
                           {/* Icono del evento */}
-                          <div className="relative z-10 flex-shrink-0 w-12 h-12 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center shadow-sm">
+                          <div className="relative z-10 flex-shrink-0 w-12 h-12 rounded-full border-2 flex items-center justify-center shadow-sm" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
                             {getEventIcon()}
                           </div>
                           
                           {/* Contenido del evento */}
                           <div className="flex-1 pb-6">
-                            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                            <div className="rounded-xl p-4 border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
                               <div className="flex justify-between items-start mb-2">
-                                <h4 className="font-semibold text-slate-900 text-sm">{event.titulo}</h4>
-                                <span className="text-xs text-slate-500 font-medium">{formatDate(event.fechaHora)}</span>
+                                <h4 className="font-semibold text-sm" style={{color: '#ffffff'}}>{event.titulo}</h4>
+                                <span className="text-xs font-medium" style={{color: '#94a3b8'}}>{formatDate(event.fechaHora)}</span>
                               </div>
-                              <p className="text-sm text-slate-700 mb-1">{event.detalle}</p>
+                              <p className="text-sm mb-1" style={{color: '#cbd5e1'}}>{event.detalle}</p>
                               {event.usuario && (
-                                <p className="text-xs text-slate-500 font-medium">Por: {event.usuario}</p>
+                                <p className="text-xs font-medium" style={{color: '#94a3b8'}}>Por: {event.usuario}</p>
                               )}
                             </div>
                           </div>
@@ -466,19 +486,19 @@ const CaseDetail: React.FC = () => {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <History className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-500 text-sm font-medium">No hay eventos en el historial</p>
+                  <History className="w-12 h-12 mx-auto mb-3" style={{color: '#64748b'}} />
+                  <p className="text-sm font-medium" style={{color: '#94a3b8'}}>No hay eventos en el historial</p>
                 </div>
               )}
             </div>
           </section>
 
           {/* Panel de comentarios */}
-          <section className="bg-white rounded-2xl shadow-sm border-2 border-slate-200/50 overflow-hidden">
-            <div className="p-8 border-b-2 border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+          <section className="rounded-2xl shadow-sm border-2 overflow-hidden" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
+            <div className="p-8 border-b-2" style={{borderColor: 'rgba(148, 163, 184, 0.15)'}}>
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5" style={{color: 'var(--color-accent-blue)'}} />
-                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Comentarios y Notas</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider" style={{color: '#cbd5e1'}}>Comentarios y Notas</h3>
               </div>
             </div>
             
@@ -487,24 +507,27 @@ const CaseDetail: React.FC = () => {
               {comments.length > 0 ? (
                 <div className="space-y-4 max-h-64 overflow-y-auto">
                   {comments.map(comment => (
-                    <div key={comment.id} className={`p-4 rounded-xl border-2 ${comment.interno ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'}`}>
+                    <div key={comment.id} className={`p-4 rounded-xl border-2`} style={{
+                      backgroundColor: comment.interno ? 'rgba(59, 130, 246, 0.15)' : 'rgba(30, 41, 59, 0.6)',
+                      borderColor: comment.interno ? 'rgba(59, 130, 246, 0.3)' : 'rgba(148, 163, 184, 0.2)'
+                    }}>
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-slate-900">{comment.usuario}</span>
+                          <span className="font-semibold text-sm" style={{color: '#ffffff'}}>{comment.usuario}</span>
                           {comment.interno && (
-                            <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">Interno</span>
+                            <span className="px-2 py-0.5 text-xs font-medium rounded-full" style={{backgroundColor: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6'}}>Interno</span>
                           )}
                         </div>
-                        <span className="text-xs text-slate-500">{formatDate(comment.fechaHora)}</span>
+                        <span className="text-xs" style={{color: '#94a3b8'}}>{formatDate(comment.fechaHora)}</span>
                       </div>
-                      <p className="text-sm text-slate-700">{comment.texto}</p>
+                      <p className="text-sm" style={{color: '#cbd5e1'}}>{comment.texto}</p>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-500 text-sm font-medium">No hay comentarios aún</p>
+                  <MessageSquare className="w-12 h-12 mx-auto mb-3" style={{color: '#64748b'}} />
+                  <p className="text-sm font-medium" style={{color: '#94a3b8'}}>No hay comentarios aún</p>
                 </div>
               )}
 
@@ -516,9 +539,10 @@ const CaseDetail: React.FC = () => {
                     id="internal-comment"
                     checked={isInternalComment}
                     onChange={(e) => setIsInternalComment(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300"
+                    className="w-4 h-4 rounded"
+                    style={{borderColor: 'rgba(148, 163, 184, 0.3)'}}
                   />
-                  <label htmlFor="internal-comment" className="text-sm font-medium text-slate-700">
+                  <label htmlFor="internal-comment" className="text-sm font-medium" style={{color: '#cbd5e1'}}>
                     Comentario interno (no visible para el cliente)
                   </label>
                 </div>
@@ -528,7 +552,12 @@ const CaseDetail: React.FC = () => {
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder={isInternalComment ? "Agregar nota interna..." : "Agregar comentario para el cliente..."}
-                    className="flex-1 p-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none text-sm"
+                    className="flex-1 p-3 rounded-xl border-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none text-sm"
+                    style={{
+                      backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                      borderColor: 'rgba(148, 163, 184, 0.3)',
+                      color: '#ffffff'
+                    }}
                     rows={3}
                   />
                   <button
@@ -541,7 +570,14 @@ const CaseDetail: React.FC = () => {
                 </div>
                 
                 {/* Botón para adjuntos (UI only) */}
-                <button className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors">
+                <button className="flex items-center gap-2 text-sm transition-colors" style={{color: '#94a3b8'}}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#cbd5e1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#94a3b8';
+                  }}
+                >
                   <Paperclip className="w-4 h-4" />
                   <span>Adjuntar archivo</span>
                 </button>
@@ -553,77 +589,89 @@ const CaseDetail: React.FC = () => {
         {/* Columna derecha */}
         <div className="space-y-6">
           {/* Información del cliente */}
-          <section className="bg-white rounded-2xl shadow-sm border-2 border-slate-200/50 p-6">
+          <section className="rounded-2xl shadow-sm border-2 p-6" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
             <div className="flex items-center gap-2 mb-5">
               <Building2 className="w-5 h-5" style={{color: 'var(--color-accent-blue)'}} />
-              <h3 className="text-sm font-black text-slate-700 uppercase tracking-wider">Información del Cliente</h3>
+              <h3 className="text-sm font-black uppercase tracking-wider" style={{color: '#cbd5e1'}}>Información del Cliente</h3>
             </div>
-            <p className="text-slate-900 font-semibold text-xl mb-5">{caso.clientName}</p>
+            <p className="font-semibold text-xl mb-5" style={{color: '#ffffff'}}>{caso.clientName}</p>
             <div className="space-y-3 mb-4">
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between p-3 rounded-xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
                 <div className="flex items-center gap-3 flex-1">
-                  <Mail className="w-4 h-4 text-slate-500"/>
-                  <p className="text-sm text-slate-700 font-medium">{caso.clientEmail}</p>
+                  <Mail className="w-4 h-4" style={{color: '#94a3b8'}}/>
+                  <p className="text-sm font-medium" style={{color: '#cbd5e1'}}>{caso.clientEmail}</p>
                 </div>
                 <a 
                   href={`mailto:${caso.clientEmail}`}
                   className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+                  style={{backgroundColor: 'rgba(59, 130, 246, 0.15)'}}
                   title="Enviar correo"
                 >
                   <Send className="w-4 h-4 text-blue-600" />
                 </a>
               </div>
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between p-3 rounded-xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
                 <div className="flex items-center gap-3 flex-1">
-                  <Phone className="w-4 h-4 text-slate-500"/>
-                  <p className="text-sm text-slate-700 font-medium">{caso.clientPhone}</p>
+                  <Phone className="w-4 h-4" style={{color: '#94a3b8'}}/>
+                  <p className="text-sm font-medium" style={{color: '#cbd5e1'}}>{caso.clientPhone}</p>
                 </div>
                 <a 
                   href={`tel:${caso.clientPhone}`}
                   className="p-2 hover:bg-green-100 rounded-lg transition-colors"
+                  style={{backgroundColor: 'rgba(34, 197, 94, 0.15)'}}
                   title="Llamar"
                 >
                   <Phone className="w-4 h-4 text-green-600" />
                 </a>
               </div>
             </div>
-            <button className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+            <button className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2" style={{
+              backgroundColor: 'rgba(30, 41, 59, 0.6)',
+              color: '#cbd5e1'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+            }}
+            >
               <FileText className="w-4 h-4" />
               Ver historial del cliente
             </button>
           </section>
 
           {/* Agente asignado enriquecido */}
-          <section className="bg-white rounded-2xl shadow-sm border-2 border-slate-200/50 p-6">
+          <section className="rounded-2xl shadow-sm border-2 p-6" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
             <div className="flex items-center gap-2 mb-5">
-              <User className="w-5 h-5 text-slate-600" />
-              <h3 className="text-sm font-black text-slate-700 uppercase tracking-wider">Agente Asignado</h3>
+              <User className="w-5 h-5" style={{color: '#94a3b8'}} />
+              <h3 className="text-sm font-black uppercase tracking-wider" style={{color: '#cbd5e1'}}>Agente Asignado</h3>
             </div>
-            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200 mb-4">
+            <div className="flex items-center gap-4 p-4 rounded-xl border mb-4" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
               <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-semibold text-lg" style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)'}}>
                 {caso.agentName.charAt(0)}
               </div>
-              <p className="text-base font-bold text-slate-800">{caso.agentName}</p>
+              <p className="text-base font-bold" style={{color: '#ffffff'}}>{caso.agentName}</p>
             </div>
             
             {/* Métricas del agente */}
             <div className="space-y-3">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="p-3 rounded-xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-600 font-medium">Casos Activos</span>
-                  <span className="text-lg font-bold text-slate-900">{caso.agenteAsignado?.casosActivos || 0}</span>
+                  <span className="text-xs font-medium" style={{color: '#94a3b8'}}>Casos Activos</span>
+                  <span className="text-lg font-bold" style={{color: '#ffffff'}}>{caso.agenteAsignado?.casosActivos || 0}</span>
                 </div>
               </div>
-              <div className="p-3 bg-red-50 rounded-xl border border-red-200">
+              <div className="p-3 rounded-xl border" style={{backgroundColor: 'rgba(220, 38, 38, 0.15)', borderColor: 'rgba(220, 38, 38, 0.3)'}}>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-red-700 font-medium">Casos Críticos</span>
-                  <span className="text-lg font-bold text-red-700">0</span>
+                  <span className="text-xs font-medium" style={{color: '#f87171'}}>Casos Críticos</span>
+                  <span className="text-lg font-bold" style={{color: '#f87171'}}>0</span>
                 </div>
               </div>
-              <div className="p-3 bg-green-50 rounded-xl border border-green-200">
+              <div className="p-3 rounded-xl border" style={{backgroundColor: 'rgba(34, 197, 94, 0.15)', borderColor: 'rgba(34, 197, 94, 0.3)'}}>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-green-700 font-medium">% Cumplimiento SLA</span>
-                  <span className="text-lg font-bold text-green-700">95%</span>
+                  <span className="text-xs font-medium" style={{color: '#22c55e'}}>% Cumplimiento SLA</span>
+                  <span className="text-lg font-bold" style={{color: '#22c55e'}}>95%</span>
                 </div>
               </div>
             </div>
@@ -634,7 +682,7 @@ const CaseDetail: React.FC = () => {
       {/* Modal Resuelto */}
       {showResueltoModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200/50 transform animate-in zoom-in-95 duration-200">
+          <div className="rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border transform animate-in zoom-in-95 duration-200" style={{backgroundColor: 'rgba(30, 41, 59, 0.95)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
             <div className="p-6 text-white flex justify-between items-center" style={{background: 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue-3))'}}>
               <h3 className="font-semibold text-lg">Registrar Resolución</h3>
               <button 
@@ -646,9 +694,14 @@ const CaseDetail: React.FC = () => {
             </div>
             <div className="p-8 space-y-5">
               <div>
-                <label className="block text-xs font-medium text-slate-600 tracking-normal mb-2">Solución Brindada</label>
+                <label className="block text-xs font-medium tracking-normal mb-2" style={{color: '#cbd5e1'}}>Solución Brindada</label>
                 <textarea 
-                  className="w-full h-32 p-4 rounded-xl border-2 border-slate-200 outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all bg-slate-50 focus:bg-white font-medium resize-none"
+                  className="w-full h-32 p-4 rounded-xl border-2 outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all font-medium resize-none"
+                  style={{
+                    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                    borderColor: 'rgba(148, 163, 184, 0.3)',
+                    color: '#ffffff'
+                  }}
                   placeholder="Describe la solución implementada..."
                   value={formDetail}
                   onChange={e => setFormDetail(e.target.value)}
@@ -658,7 +711,18 @@ const CaseDetail: React.FC = () => {
                 <button 
                   type="button"
                   onClick={() => setShowResueltoModal(false)}
-                  className="flex-1 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all border border-slate-200"
+                  className="flex-1 py-3.5 text-sm font-bold rounded-xl transition-all border"
+                  style={{
+                    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                    color: '#cbd5e1',
+                    borderColor: 'rgba(148, 163, 184, 0.2)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                  }}
                 >
                   Cancelar
                 </button>
@@ -679,7 +743,7 @@ const CaseDetail: React.FC = () => {
       {/* Modal Pendiente Cliente */}
       {showPendienteModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200/50">
+          <div className="rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.95)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
             <div className="p-6 text-white flex justify-between items-center" style={{background: 'linear-gradient(to right, var(--color-accent-blue-2), var(--color-accent-blue-3))'}}>
               <h3 className="font-semibold text-lg">Cambiar a Pendiente Cliente</h3>
               <button onClick={() => setShowPendienteModal(false)} className="p-1 hover:bg-white/20 rounded-lg">
@@ -687,9 +751,20 @@ const CaseDetail: React.FC = () => {
               </button>
             </div>
             <div className="p-8 space-y-5">
-              <p className="text-sm text-slate-700">¿Estás seguro de cambiar el estado a "Pendiente Cliente"?</p>
+              <p className="text-sm" style={{color: '#cbd5e1'}}>¿Estás seguro de cambiar el estado a "Pendiente Cliente"?</p>
               <div className="flex gap-3">
-                <button onClick={() => setShowPendienteModal(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200">
+                <button onClick={() => setShowPendienteModal(false)} className="flex-1 py-3 text-sm font-bold rounded-xl border" style={{
+                  backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                  color: '#cbd5e1',
+                  borderColor: 'rgba(148, 163, 184, 0.2)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                }}
+                >
                   Cancelar
                 </button>
                 <button 
@@ -708,7 +783,7 @@ const CaseDetail: React.FC = () => {
       {/* Modal Escalar */}
       {showEscalarModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200/50">
+          <div className="rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.95)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
             <div className="p-6 text-white flex justify-between items-center bg-gradient-to-r from-amber-600 to-amber-700">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-6 h-6" />
@@ -719,9 +794,20 @@ const CaseDetail: React.FC = () => {
               </button>
             </div>
             <div className="p-8 space-y-5">
-              <p className="text-sm text-slate-700">¿Estás seguro de escalar este caso? Esta acción requiere atención inmediata del supervisor.</p>
+              <p className="text-sm" style={{color: '#cbd5e1'}}>¿Estás seguro de escalar este caso? Esta acción requiere atención inmediata del supervisor.</p>
               <div className="flex gap-3">
-                <button onClick={() => setShowEscalarModal(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200">
+                <button onClick={() => setShowEscalarModal(false)} className="flex-1 py-3 text-sm font-bold rounded-xl border" style={{
+                  backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                  color: '#cbd5e1',
+                  borderColor: 'rgba(148, 163, 184, 0.2)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                }}
+                >
                   Cancelar
                 </button>
                 <button 
@@ -739,7 +825,7 @@ const CaseDetail: React.FC = () => {
       {/* Modal Cerrar */}
       {showCerrarModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200/50">
+          <div className="rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.95)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
             <div className="p-6 text-white flex justify-between items-center bg-gradient-to-r from-green-600 to-green-700">
               <div className="flex items-center gap-2">
                 <Lock className="w-6 h-6" />
@@ -750,9 +836,20 @@ const CaseDetail: React.FC = () => {
               </button>
             </div>
             <div className="p-8 space-y-5">
-              <p className="text-sm text-slate-700">¿Estás seguro de cerrar este caso? Esta acción no se puede deshacer.</p>
+              <p className="text-sm" style={{color: '#cbd5e1'}}>¿Estás seguro de cerrar este caso? Esta acción no se puede deshacer.</p>
               <div className="flex gap-3">
-                <button onClick={() => setShowCerrarModal(false)} className="flex-1 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200">
+                <button onClick={() => setShowCerrarModal(false)} className="flex-1 py-3 text-sm font-bold rounded-xl border" style={{
+                  backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                  color: '#cbd5e1',
+                  borderColor: 'rgba(148, 163, 184, 0.2)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                }}
+                >
                   Cancelar
                 </button>
                 <button 
@@ -770,7 +867,7 @@ const CaseDetail: React.FC = () => {
       {/* Modal Reasignar */}
       {showReasignarModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200/50">
+          <div className="rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.95)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
             <div className="p-6 text-white flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-700">
               <h3 className="font-semibold text-lg">Reasignar Agente</h3>
               <button onClick={() => setShowReasignarModal(false)} className="p-1 hover:bg-white/20 rounded-lg">
@@ -778,7 +875,7 @@ const CaseDetail: React.FC = () => {
               </button>
             </div>
             <div className="p-8 space-y-5">
-              <p className="text-sm text-slate-700">Funcionalidad de reasignación próximamente disponible.</p>
+              <p className="text-sm" style={{color: '#cbd5e1'}}>Funcionalidad de reasignación próximamente disponible.</p>
               <button onClick={() => setShowReasignarModal(false)} className="w-full py-3 text-white font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-blue-700">
                 Cerrar
               </button>

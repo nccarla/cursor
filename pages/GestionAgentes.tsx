@@ -269,10 +269,10 @@ const GestionAgentes: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full" style={{ overflow: 'hidden', gap: '1.5rem' }}>
-      <div className="flex justify-between items-center bg-gradient-to-r from-slate-50 to-slate-100 p-5 rounded-2xl border border-slate-200 flex-shrink-0">
+      <div className="p-5 rounded-2xl border flex-shrink-0 flex justify-between items-center" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
          <div>
-           <h2 className="text-lg font-semibold text-slate-900 mb-1">Gestión de Agentes</h2>
-           <p className="text-slate-600 text-sm font-medium">Control de disponibilidad y carga de trabajo del equipo SAC.</p>
+           <h2 className="text-lg font-semibold mb-1" style={{color: '#ffffff'}}>Gestión de Agentes</h2>
+           <p className="text-sm font-medium" style={{color: '#94a3b8'}}>Control de disponibilidad y carga de trabajo del equipo SAC.</p>
          </div>
          <div className="flex gap-3">
            <button 
@@ -285,10 +285,16 @@ const GestionAgentes: React.FC = () => {
            </button>
            <button 
              onClick={loadAgentes} 
-             className="p-3 text-accent-gray hover:bg-white rounded-xl transition-all shadow-sm hover:shadow-md"
-             style={{color: 'var(--color-accent-gray)'}}
-             onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent-blue)'}
-             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-accent-gray)'}
+             className="p-3 rounded-xl transition-all shadow-sm hover:shadow-md"
+             style={{color: '#94a3b8'}}
+             onMouseEnter={(e) => {
+               e.currentTarget.style.color = '#cbd5e1';
+               e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+             }}
+             onMouseLeave={(e) => {
+               e.currentTarget.style.color = '#94a3b8';
+               e.currentTarget.style.backgroundColor = 'transparent';
+             }}
              title="Actualizar lista"
            >
               <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
@@ -299,26 +305,26 @@ const GestionAgentes: React.FC = () => {
       {loading && agentes.length === 0 ? (
         <div className="flex gap-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="flex-shrink-0 bg-white rounded-2xl border-2 border-slate-200/50 p-4 w-80 animate-pulse">
+            <div key={i} className="flex-shrink-0 rounded-2xl border-2 p-4 w-80 animate-pulse" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 bg-slate-200 rounded-xl"></div>
+                <div className="w-12 h-12 rounded-xl" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
                 <div className="flex-1">
-                  <div className="h-4 bg-slate-200 rounded w-24 mb-2"></div>
-                  <div className="h-3 bg-slate-200 rounded w-16"></div>
+                  <div className="h-4 rounded w-24 mb-2" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
+                  <div className="h-3 rounded w-16" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
                 </div>
               </div>
-              <div className="h-16 bg-slate-100 rounded-xl mb-3"></div>
-              <div className="h-10 bg-slate-200 rounded-xl"></div>
+              <div className="h-16 rounded-xl mb-3" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
+              <div className="h-10 rounded-xl" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
             </div>
           ))}
         </div>
       ) : agentes.length === 0 ? (
-        <div className="bg-white rounded-2xl border-2 border-slate-200/50 p-16 text-center">
-          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Users className="w-10 h-10 text-slate-400" />
+        <div className="rounded-2xl border-2 p-16 text-center" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)'}}>
+            <Users className="w-10 h-10" style={{color: '#94a3b8'}} />
           </div>
-          <h3 className="text-lg font-bold text-slate-800 mb-2">No hay agentes disponibles</h3>
-          <p className="text-slate-500 text-sm mb-6">Los agentes aparecerán aquí cuando estén registrados</p>
+          <h3 className="text-lg font-bold mb-2" style={{color: '#ffffff'}}>No hay agentes disponibles</h3>
+          <p className="text-sm mb-6" style={{color: '#94a3b8'}}>Los agentes aparecerán aquí cuando estén registrados</p>
           <button
             onClick={() => navigate('/app/crear-cuenta')}
             className="px-6 py-3 text-white font-semibold rounded-xl hover:shadow-xl transition-all flex items-center gap-2 mx-auto"
@@ -332,7 +338,7 @@ const GestionAgentes: React.FC = () => {
         <div className="relative w-full flex-1" style={{ overflow: 'hidden', minHeight: 0, display: 'flex', flexDirection: 'column', maxHeight: '100%' }}>
           {/* Microcopy */}
           {agentes.length > itemsPerView && (
-            <p className="text-xs text-slate-500 text-center mb-2 flex-shrink-0">
+            <p className="text-xs text-center mb-2 flex-shrink-0" style={{color: '#94a3b8'}}>
               Desliza para ver más agentes
             </p>
           )}
@@ -344,26 +350,50 @@ const GestionAgentes: React.FC = () => {
                 <button
                   onClick={prevPage}
                   disabled={currentIndex === 0}
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-white rounded-full p-3 shadow-xl hover:shadow-2xl transition-all duration-200 border-2 ${
-                    currentIndex === 0 
-                      ? 'opacity-40 cursor-not-allowed border-slate-200' 
-                      : 'hover:scale-110 border-slate-300 hover:border-slate-400'
-                  }`}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-30 rounded-full p-3 shadow-xl hover:shadow-2xl transition-all duration-200 border-2"
+                  style={{
+                    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                    borderColor: currentIndex === 0 ? 'rgba(148, 163, 184, 0.2)' : 'rgba(148, 163, 184, 0.3)',
+                    opacity: currentIndex === 0 ? 0.4 : 1,
+                    cursor: currentIndex === 0 ? 'not-allowed' : 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentIndex !== 0) {
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                      e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.4)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                    e.currentTarget.style.borderColor = currentIndex === 0 ? 'rgba(148, 163, 184, 0.2)' : 'rgba(148, 163, 184, 0.3)';
+                  }}
                   aria-label="Anterior"
                 >
-                  <ChevronLeft className={`w-6 h-6 ${currentIndex === 0 ? 'text-slate-400' : 'text-slate-700'}`} />
+                  <ChevronLeft className="w-6 h-6" style={{color: currentIndex === 0 ? '#64748b' : '#cbd5e1'}} />
                 </button>
                 <button
                   onClick={nextPage}
                   disabled={currentIndex >= totalPages - 1}
-                  className={`absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-white rounded-full p-3 shadow-xl hover:shadow-2xl transition-all duration-200 border-2 ${
-                    currentIndex >= totalPages - 1 
-                      ? 'opacity-40 cursor-not-allowed border-slate-200' 
-                      : 'hover:scale-110 border-slate-300 hover:border-slate-400'
-                  }`}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-30 rounded-full p-3 shadow-xl hover:shadow-2xl transition-all duration-200 border-2"
+                  style={{
+                    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                    borderColor: currentIndex >= totalPages - 1 ? 'rgba(148, 163, 184, 0.2)' : 'rgba(148, 163, 184, 0.3)',
+                    opacity: currentIndex >= totalPages - 1 ? 0.4 : 1,
+                    cursor: currentIndex >= totalPages - 1 ? 'not-allowed' : 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentIndex < totalPages - 1) {
+                      e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+                      e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.4)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                    e.currentTarget.style.borderColor = currentIndex >= totalPages - 1 ? 'rgba(148, 163, 184, 0.2)' : 'rgba(148, 163, 184, 0.3)';
+                  }}
                   aria-label="Siguiente"
                 >
-                  <ChevronRight className={`w-6 h-6 ${currentIndex >= totalPages - 1 ? 'text-slate-400' : 'text-slate-700'}`} />
+                  <ChevronRight className="w-6 h-6" style={{color: currentIndex >= totalPages - 1 ? '#64748b' : '#cbd5e1'}} />
                 </button>
               </>
             )}
@@ -405,8 +435,10 @@ const GestionAgentes: React.FC = () => {
                   return (
                   <div
                     key={agente.idAgente}
-                    className="snap-center flex-shrink-0 bg-white rounded-2xl border-2 border-slate-200/50 shadow-sm overflow-hidden group"
+                    className="snap-center flex-shrink-0 rounded-2xl border-2 shadow-sm overflow-hidden group"
                     style={{
+                      backgroundColor: 'rgba(30, 41, 59, 0.4)',
+                      borderColor: 'rgba(148, 163, 184, 0.15)',
                       width: `calc((100% - ${(itemsPerView - 1) * 16}px) / ${itemsPerView})`,
                       minWidth: '280px',
                       maxWidth: '280px',
@@ -418,7 +450,7 @@ const GestionAgentes: React.FC = () => {
                       pointerEvents: 'auto',
                       visibility: 'visible',
                       flexShrink: 0,
-                      boxShadow: isHovered ? '0 20px 40px rgba(0, 0, 0, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
+                      boxShadow: isHovered ? '0 20px 40px rgba(0, 0, 0, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.2)'
                     }}
                     onMouseEnter={() => setHoveredAgenteId(agente.idAgente)}
                     onMouseLeave={() => setHoveredAgenteId(null)}
@@ -430,10 +462,10 @@ const GestionAgentes: React.FC = () => {
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center font-bold text-base shadow-md">
                             {agente.nombre.charAt(0)}
                           </div>
-                          <div className={`absolute -inset-1 rounded-xl ring-2 ${getEstadoRingColor(agente.estado)} ring-offset-2 ring-offset-white`}></div>
+                          <div className={`absolute -inset-1 rounded-xl ring-2 ${getEstadoRingColor(agente.estado)} ring-offset-2`} style={{ringOffsetColor: 'rgba(30, 41, 59, 0.4)'}}></div>
                         </div>
                         <div className="flex-1 min-w-0 overflow-hidden">
-                          <h4 className="font-bold text-slate-900 text-sm mb-0.5 truncate">{agente.nombre}</h4>
+                          <h4 className="font-bold text-sm mb-0.5 truncate" style={{color: '#ffffff'}}>{agente.nombre}</h4>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-xs font-semibold ${getEstadoBadge(agente.estado)}`}>
                               {agente.estado}
@@ -465,16 +497,16 @@ const GestionAgentes: React.FC = () => {
                         return (
                           <div className="space-y-2 mb-2">
                             {/* Casos Activos con Barra de Carga */}
-                            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <div className="p-2.5 rounded-xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
                               <div className="flex items-center justify-between mb-1.5">
                                 <div className="flex items-center gap-1.5">
-                                  <Briefcase className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-                                  <span className="text-xs font-medium text-slate-600">Activos</span>
+                                  <Briefcase className="w-3.5 h-3.5 flex-shrink-0" style={{color: '#94a3b8'}} />
+                                  <span className="text-xs font-medium" style={{color: '#94a3b8'}}>Activos</span>
                                 </div>
-                                <span className="text-base font-bold text-slate-900">{agente.casosActivos}</span>
+                                <span className="text-base font-bold" style={{color: '#ffffff'}}>{agente.casosActivos}</span>
                               </div>
                               {/* Barra de carga visual */}
-                              <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                              <div className="w-full rounded-full h-1.5 overflow-hidden" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}>
                                 <div
                                   className={`h-full rounded-full transition-all duration-300 ${cargaColor}`}
                                   style={{ width: `${cargaPercent}%` }}
@@ -483,23 +515,26 @@ const GestionAgentes: React.FC = () => {
                             </div>
 
                             {/* R-Robin con destacado */}
-                            <div className={`p-2.5 rounded-xl border-2 transition-all ${
-                              esSiguiente 
-                                ? 'bg-green-50 border-green-300 shadow-sm' 
-                                : 'bg-slate-50 border-slate-200'
-                            }`}>
+                            <div className="p-2.5 rounded-xl border-2 transition-all" style={{
+                              backgroundColor: esSiguiente ? 'rgba(34, 197, 94, 0.15)' : 'rgba(30, 41, 59, 0.6)',
+                              borderColor: esSiguiente ? 'rgba(34, 197, 94, 0.3)' : 'rgba(148, 163, 184, 0.2)'
+                            }}>
                               <div className="flex items-center gap-1.5 mb-1">
-                                <RotateCcw className={`w-3.5 h-3.5 ${esSiguiente ? 'text-green-600' : 'text-slate-500'} flex-shrink-0`} />
-                                <span className={`text-xs font-medium ${esSiguiente ? 'text-green-700' : 'text-slate-600'}`}>
+                                <RotateCcw className="w-3.5 h-3.5 flex-shrink-0" style={{color: esSiguiente ? '#22c55e' : '#94a3b8'}} />
+                                <span className="text-xs font-medium" style={{color: esSiguiente ? '#22c55e' : '#94a3b8'}}>
                                   R-Robin
                                 </span>
                               </div>
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`text-base font-bold ${esSiguiente ? 'text-green-700' : 'text-slate-900'}`}>
+                                <span className="text-base font-bold" style={{color: esSiguiente ? '#22c55e' : '#ffffff'}}>
                                   #{posicionPrioridad}
                                 </span>
                                 {esSiguiente && (
-                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-xs font-semibold border border-green-200">
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold border" style={{
+                                    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                                    color: '#22c55e',
+                                    borderColor: 'rgba(34, 197, 94, 0.3)'
+                                  }}>
                                     <TrendingUp className="w-2.5 h-2.5" />
                                     Siguiente
                                   </span>
@@ -512,8 +547,8 @@ const GestionAgentes: React.FC = () => {
 
                       {/* Contexto adicional */}
                       {(casosHoy > 0 || agente.ultimoCasoAsignado) && (
-                        <div className="mb-3 px-2 py-1.5 bg-slate-50 rounded-lg border border-slate-200">
-                          <div className="flex items-center gap-2 text-xs text-slate-600">
+                        <div className="mb-3 px-2 py-1.5 rounded-lg border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
+                          <div className="flex items-center gap-2 text-xs" style={{color: '#94a3b8'}}>
                             <Clock className="w-3 h-3" />
                             <span className="font-medium">
                               {casosHoy > 0 
@@ -530,23 +565,29 @@ const GestionAgentes: React.FC = () => {
                         {/* Acción Primaria: Activar/Desactivar */}
                         <button 
                           onClick={() => toggleEstado(agente.idAgente, agente.estado)}
-                          className={`w-full py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md ${
-                            agente.estado === 'Activo' 
-                              ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200' 
-                              : 'text-white'
-                          }`}
-                          style={agente.estado !== 'Activo' ? {
+                          className="w-full py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md border"
+                          style={agente.estado === 'Activo' ? {
+                            backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                            color: '#cbd5e1',
+                            borderColor: 'rgba(148, 163, 184, 0.2)'
+                          } : {
                             background: 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))',
-                            boxShadow: '0 8px 20px rgba(200, 21, 27, 0.2)'
-                          } : {}}
+                            boxShadow: '0 8px 20px rgba(200, 21, 27, 0.2)',
+                            color: '#ffffff',
+                            borderColor: 'transparent'
+                          }}
                           onMouseEnter={(e) => {
-                            if (agente.estado !== 'Activo') {
+                            if (agente.estado === 'Activo') {
+                              e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                            } else {
                               e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-red), var(--color-brand-red))';
                               e.currentTarget.style.boxShadow = '0 10px 24px rgba(245, 41, 56, 0.25)';
                             }
                           }}
                           onMouseLeave={(e) => {
-                            if (agente.estado !== 'Activo') {
+                            if (agente.estado === 'Activo') {
+                              e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                            } else {
                               e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))';
                               e.currentTarget.style.boxShadow = '0 8px 20px rgba(200, 21, 27, 0.2)';
                             }
@@ -562,11 +603,27 @@ const GestionAgentes: React.FC = () => {
                           <button 
                             onClick={() => setVacaciones(agente.idAgente)}
                             disabled={agente.estado === 'Vacaciones'}
-                            className={`flex-1 py-1.5 rounded-lg transition-all border shadow-sm hover:shadow-md flex items-center justify-center gap-1 min-w-0 ${
-                              agente.estado === 'Vacaciones'
-                                ? 'bg-amber-200 text-amber-800 border-amber-300 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-amber-100 to-amber-50 text-amber-700 hover:from-amber-200 hover:to-amber-100 border-amber-200'
-                            }`}
+                            className="flex-1 py-1.5 rounded-lg transition-all border shadow-sm hover:shadow-md flex items-center justify-center gap-1 min-w-0"
+                            style={agente.estado === 'Vacaciones' ? {
+                              backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                              color: '#f59e0b',
+                              borderColor: 'rgba(245, 158, 11, 0.3)',
+                              cursor: 'not-allowed'
+                            } : {
+                              backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                              color: '#f59e0b',
+                              borderColor: 'rgba(245, 158, 11, 0.3)'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (agente.estado !== 'Vacaciones') {
+                                e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.25)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (agente.estado !== 'Vacaciones') {
+                                e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+                              }
+                            }}
                             title={agente.estado === 'Vacaciones' ? 'Ya está en vacaciones' : 'Marcar en vacaciones'}
                           >
                             <Sun className="w-3 h-3 flex-shrink-0" />
@@ -577,7 +634,18 @@ const GestionAgentes: React.FC = () => {
                         {/* Acción Destructiva Separada */}
                         <button 
                           onClick={() => handleDeleteClick(agente)}
-                          className="w-full py-1.5 px-2 bg-gradient-to-r from-red-50 to-red-100 text-red-700 rounded-lg hover:from-red-100 hover:to-red-200 transition-all border border-red-200 shadow-sm hover:shadow-md flex items-center justify-center gap-1.5 group"
+                          className="w-full py-1.5 px-2 rounded-lg transition-all border shadow-sm hover:shadow-md flex items-center justify-center gap-1.5 group"
+                          style={{
+                            backgroundColor: 'rgba(220, 38, 38, 0.15)',
+                            color: '#f87171',
+                            borderColor: 'rgba(220, 38, 38, 0.3)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.25)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(220, 38, 38, 0.15)';
+                          }}
                           title="Eliminar agente permanentemente"
                         >
                           <Trash2 className="w-3 h-3 group-hover:scale-110 transition-transform flex-shrink-0" />
@@ -600,15 +668,28 @@ const GestionAgentes: React.FC = () => {
                 <button
                   key={index}
                   onClick={() => scrollToIndex(index)}
-                  className={`h-2.5 rounded-full transition-all duration-300 ${
-                    index === currentIndex
-                      ? 'w-10 bg-slate-800 shadow-lg'
-                      : 'w-2.5 bg-slate-300 hover:bg-slate-400'
-                  }`}
+                  style={{
+                    width: index === currentIndex ? '40px' : '10px',
+                    backgroundColor: index === currentIndex ? 'rgb(15, 23, 42)' : 'rgba(148, 163, 184, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (index !== currentIndex) {
+                      e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.5)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (index !== currentIndex) {
+                      e.currentTarget.style.backgroundColor = 'rgba(148, 163, 184, 0.3)';
+                    }
+                  }}
                   aria-label={`Ir a página ${index + 1}`}
                 />
               ))}
-              <span className="ml-2 px-3 py-1 bg-slate-100 rounded-full text-xs font-semibold text-slate-700 border border-slate-200">
+              <span className="ml-2 px-3 py-1 rounded-full text-xs font-semibold border" style={{
+                backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                color: '#cbd5e1',
+                borderColor: 'rgba(148, 163, 184, 0.2)'
+              }}>
                 {currentIndex + 1} / {totalPages}
               </span>
             </div>
@@ -619,34 +700,43 @@ const GestionAgentes: React.FC = () => {
       {/* Modal de confirmación para eliminar agente */}
       {showDeleteModal && agenteToDelete && (
         <div className="fixed inset-0 backdrop-blur-xl z-50 flex items-center justify-center p-4 animate-in fade-in duration-300" style={{backgroundColor: 'rgba(20, 84, 120, 0.7)'}}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform animate-in zoom-in-95 scale-in duration-300 border" style={{borderColor: 'rgba(226, 232, 240, 0.6)', boxShadow: '0 20px 50px -12px rgba(0, 0, 0, 0.25)'}}>
-            <div className="p-6 border-b flex justify-between items-center bg-gradient-to-r from-red-50 via-white to-red-50" style={{borderColor: 'rgba(200, 21, 27, 0.2)'}}>
+          <div className="rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform animate-in zoom-in-95 scale-in duration-300 border" style={{backgroundColor: 'rgba(30, 41, 59, 0.95)', borderColor: 'rgba(148, 163, 184, 0.15)', boxShadow: '0 20px 50px -12px rgba(0, 0, 0, 0.5)'}}>
+            <div className="p-6 border-b flex justify-between items-center" style={{borderColor: 'rgba(200, 21, 27, 0.2)'}}>
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl shadow-lg" style={{backgroundColor: 'rgba(200, 21, 27, 0.15)'}}>
-                  <AlertTriangle className="w-6 h-6" style={{color: 'var(--color-brand-red)'}} />
+                <div className="p-3 rounded-2xl shadow-lg" style={{backgroundColor: 'rgba(200, 21, 27, 0.2)'}}>
+                  <AlertTriangle className="w-6 h-6" style={{color: '#f87171'}} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900" style={{letterSpacing: '-0.02em'}}>Confirmar Eliminación</h3>
-                  <p className="text-sm text-slate-500 mt-1 font-medium">Esta acción no se puede deshacer</p>
+                  <h3 className="text-xl font-bold" style={{color: '#ffffff', letterSpacing: '-0.02em'}}>Confirmar Eliminación</h3>
+                  <p className="text-sm mt-1 font-medium" style={{color: '#94a3b8'}}>Esta acción no se puede deshacer</p>
                 </div>
               </div>
               <button 
                 onClick={handleDeleteCancel} 
-                className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all"
+                className="p-2.5 rounded-xl transition-all"
+                style={{color: '#94a3b8'}}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#cbd5e1';
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#94a3b8';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             <div className="p-6 space-y-4">
-              <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4">
-                <p className="text-sm font-semibold text-red-900 mb-2">
+              <div className="border-2 rounded-2xl p-4" style={{backgroundColor: 'rgba(220, 38, 38, 0.1)', borderColor: 'rgba(220, 38, 38, 0.3)'}}>
+                <p className="text-sm font-semibold mb-2" style={{color: '#f87171'}}>
                   ¿Estás seguro de que deseas eliminar al agente?
                 </p>
-                <div className="bg-white rounded-xl p-3 border border-red-200">
-                  <p className="text-base font-bold text-slate-900">{agenteToDelete.nombre}</p>
-                  <p className="text-sm text-slate-600">{agenteToDelete.email}</p>
-                  <p className="text-xs text-slate-500 mt-1">Estado: <span className="font-semibold">{agenteToDelete.estado}</span></p>
+                <div className="rounded-xl p-3 border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(220, 38, 38, 0.3)'}}>
+                  <p className="text-base font-bold" style={{color: '#ffffff'}}>{agenteToDelete.nombre}</p>
+                  <p className="text-sm" style={{color: '#94a3b8'}}>{agenteToDelete.email}</p>
+                  <p className="text-xs mt-1" style={{color: '#64748b'}}>Estado: <span className="font-semibold" style={{color: '#94a3b8'}}>{agenteToDelete.estado}</span></p>
                 </div>
               </div>
               
@@ -654,7 +744,14 @@ const GestionAgentes: React.FC = () => {
                 <button 
                   type="button" 
                   onClick={handleDeleteCancel} 
-                  className="flex-1 py-4 text-sm font-bold text-slate-700 hover:bg-slate-100 rounded-2xl transition-all border border-slate-200 shadow-sm hover:shadow-md"
+                  className="flex-1 py-4 text-sm font-bold rounded-2xl transition-all border shadow-sm hover:shadow-md"
+                  style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', color: '#cbd5e1', borderColor: 'rgba(148, 163, 184, 0.2)'}}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                  }}
                 >
                   Cancelar
                 </button>

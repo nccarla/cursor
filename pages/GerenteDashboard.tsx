@@ -188,18 +188,20 @@ const GerenteDashboard: React.FC = () => {
     tooltip?: string;
   }> = ({ label, value, color, bg, icon: Icon, variation, isHighlighted = false, tooltip }) => (
     <div
-      className={`bg-white p-6 rounded-2xl border shadow-sm flex items-center justify-between relative group ${
-        isHighlighted ? 'border-red-300 bg-red-50/30' : 'border-slate-100'
-      }`}
+      className="p-6 rounded-2xl border shadow-sm flex items-center justify-between relative group"
+      style={{
+        backgroundColor: isHighlighted ? 'rgba(220, 38, 38, 0.1)' : 'rgba(30, 41, 59, 0.4)',
+        borderColor: isHighlighted ? 'rgba(220, 38, 38, 0.3)' : 'rgba(148, 163, 184, 0.15)'
+      }}
       onMouseEnter={() => setHoveredKPI(label)}
       onMouseLeave={() => setHoveredKPI(null)}
     >
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">{label}</p>
+          <p className="text-sm font-bold uppercase tracking-widest" style={{color: '#94a3b8'}}>{label}</p>
           {tooltip && (
             <div className="relative">
-              <Info className="w-3.5 h-3.5 text-slate-400" />
+              <Info className="w-3.5 h-3.5" style={{color: '#94a3b8'}} />
               {hoveredKPI === label && (
                 <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap z-50">
                   {tooltip}
@@ -209,7 +211,7 @@ const GerenteDashboard: React.FC = () => {
             </div>
           )}
         </div>
-        <h3 className={`text-3xl font-black mt-1 ${color}`}>{value}</h3>
+        <h3 className="text-3xl font-black mt-1" style={{color: color.includes('red') ? '#ef4444' : color.includes('green') ? '#22c55e' : color.includes('slate') ? '#ffffff' : '#ffffff'}}>{value}</h3>
         <div className="mt-2 flex items-center gap-2">
           {variation.isPositive && !variation.isNegative && (
             <ArrowUp className={`w-3 h-3 ${label === 'Excedidos SLA' ? 'text-red-600' : 'text-green-600'}`} />
@@ -217,25 +219,25 @@ const GerenteDashboard: React.FC = () => {
           {variation.isNegative && (
             <ArrowDown className="w-3 h-3 text-green-600" />
           )}
-          <span className={`text-xs font-semibold ${
-            label === 'Excedidos SLA' 
-              ? variation.isPositive ? 'text-red-600' : 'text-green-600'
-              : variation.isPositive ? 'text-green-600' : 'text-red-600'
-          }`}>
+          <span className="text-xs font-semibold" style={{
+            color: label === 'Excedidos SLA' 
+              ? variation.isPositive ? '#ef4444' : '#22c55e'
+              : variation.isPositive ? '#22c55e' : '#ef4444'
+          }}>
             {variation.value}
           </span>
         </div>
         {variation.percent && (
-          <p className="text-xs text-slate-500 mt-0.5">{variation.percent}</p>
+          <p className="text-xs mt-0.5" style={{color: '#94a3b8'}}>{variation.percent}</p>
         )}
         {isHighlighted && vencidos > 0 && (
-          <p className="text-xs font-semibold text-red-700 mt-2">
+          <p className="text-xs font-semibold mt-2" style={{color: '#f87171'}}>
             {vencidos} caso{vencidos !== 1 ? 's' : ''} fuera de SLA requieren atención
           </p>
         )}
       </div>
-      <div className={`p-3 rounded-xl ${bg}`}>
-        <Icon className={`w-6 h-6 ${bg === 'bg-slate-900' ? 'text-white' : color}`} />
+      <div className="p-3 rounded-xl" style={{backgroundColor: bg === 'bg-slate-900' ? 'rgb(15, 23, 42)' : bg === 'bg-red-50' ? 'rgba(220, 38, 38, 0.15)' : bg === 'bg-green-50' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(30, 41, 59, 0.6)'}}>
+        <Icon className="w-6 h-6" style={{color: bg === 'bg-slate-900' ? '#ffffff' : color.includes('red') ? '#ef4444' : color.includes('green') ? '#22c55e' : '#ffffff'}} />
       </div>
     </div>
   );
@@ -245,29 +247,50 @@ const GerenteDashboard: React.FC = () => {
       {/* Header con filtro de período y última actualización */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div></div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white rounded-xl border border-slate-200 p-1">
+          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 rounded-xl border p-1" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
             {(['hoy', 'semana', 'mes'] as PeriodFilter[]).map((period) => (
               <button
                 key={period}
                 onClick={() => setPeriodFilter(period)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  periodFilter === period
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-50'
-                }`}
+                className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                style={{
+                  backgroundColor: periodFilter === period ? 'rgb(15, 23, 42)' : 'transparent',
+                  color: periodFilter === period ? '#ffffff' : '#cbd5e1'
+                }}
+                onMouseEnter={(e) => {
+                  if (periodFilter !== period) {
+                    e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (periodFilter !== period) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
               >
                 {period === 'hoy' ? 'Hoy' : period === 'semana' ? 'Semana' : 'Mes'}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="flex items-center gap-2 text-xs" style={{color: '#94a3b8'}}>
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Actualizado: {lastUpdate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
             <button
               onClick={loadData}
               disabled={loading}
-              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
+              className="p-1.5 rounded-lg transition-colors disabled:opacity-50"
+              style={{color: '#94a3b8'}}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.color = '#cbd5e1';
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#94a3b8';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
               title="Actualizar"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -281,7 +304,7 @@ const GerenteDashboard: React.FC = () => {
         <KPICard
           label="Casos Abiertos"
           value={abiertos}
-          color="text-slate-900"
+          color="#ffffff"
           bg="bg-slate-900"
           icon={TrendingUp}
           variation={abiertosVar}
@@ -290,7 +313,7 @@ const GerenteDashboard: React.FC = () => {
         <KPICard
           label="Excedidos SLA"
           value={vencidos}
-          color="text-red-600"
+          color="#ef4444"
           bg="bg-red-50"
           icon={Clock}
           variation={vencidosVar}
@@ -300,7 +323,7 @@ const GerenteDashboard: React.FC = () => {
         <KPICard
           label="CSAT Promedio"
           value={kpis.csatScore.toFixed(1)}
-          color="text-green-600"
+          color="#22c55e"
           bg="bg-green-50"
           icon={ThumbsUp}
           variation={csatVar}
@@ -309,7 +332,7 @@ const GerenteDashboard: React.FC = () => {
         <KPICard
           label="Total Histórico"
           value={kpis.totalCases}
-          color="text-slate-600"
+          color="#ffffff"
           bg="bg-slate-50"
           icon={Users}
           variation={historicoVar}
@@ -319,15 +342,15 @@ const GerenteDashboard: React.FC = () => {
 
       {/* Resumen Ejecutivo */}
       {insights.length > 0 && (
-        <div className="bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-slate-600" />
+        <div className="p-6 rounded-2xl border shadow-sm" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{color: '#ffffff'}}>
+            <CheckCircle2 className="w-5 h-5" style={{color: '#94a3b8'}} />
             Resumen Ejecutivo
           </h3>
           <ul className="space-y-2">
             {insights.map((insight, idx) => (
-              <li key={idx} className="flex items-center gap-2 text-sm text-slate-700">
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+              <li key={idx} className="flex items-center gap-2 text-sm" style={{color: '#cbd5e1'}}>
+                <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: '#94a3b8'}}></div>
                 {insight}
               </li>
             ))}
@@ -338,37 +361,37 @@ const GerenteDashboard: React.FC = () => {
       {/* Gráficas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Distribución por Estado */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="p-6 rounded-2xl border shadow-sm" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800">Distribución por Estado</h3>
-            <div className="text-xs text-slate-500 font-medium">
+            <h3 className="text-lg font-bold" style={{color: '#ffffff'}}>Distribución por Estado</h3>
+            <div className="text-xs font-medium" style={{color: '#94a3b8'}}>
               Total: {totalCasos} casos
             </div>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartDataWithPercent}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.15)" />
                 <XAxis 
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false}
-                  tick={{ fontSize: 12, fill: '#64748b' }}
+                  tick={{ fontSize: 12, fill: '#94a3b8' }}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false}
-                  tick={{ fontSize: 12, fill: '#64748b' }}
+                  tick={{ fontSize: 12, fill: '#94a3b8' }}
                 />
                 <Tooltip 
-                  cursor={{fill: '#f8fafc'}}
+                  cursor={{fill: 'rgba(148, 163, 184, 0.1)'}}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload;
                       return (
-                        <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-200">
-                          <p className="font-semibold text-slate-800">{data.name}</p>
-                          <p className="text-sm text-slate-600">
+                        <div className="p-3 rounded-lg shadow-lg border" style={{backgroundColor: 'rgba(30, 41, 59, 0.95)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
+                          <p className="font-semibold" style={{color: '#ffffff'}}>{data.name}</p>
+                          <p className="text-sm" style={{color: '#cbd5e1'}}>
                             {data.value} caso{data.value !== 1 ? 's' : ''} ({data.percent}%)
                           </p>
                         </div>
@@ -387,37 +410,39 @@ const GerenteDashboard: React.FC = () => {
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
             {chartDataWithPercent.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+              <div key={idx} className="flex items-center justify-between p-2 rounded-lg" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)'}}>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS[idx] }}></div>
-                  <span className="text-slate-600 font-medium">{item.name}</span>
+                  <span className="font-medium" style={{color: '#cbd5e1'}}>{item.name}</span>
                 </div>
-                <span className="text-slate-800 font-bold">{item.value} ({item.percent}%)</span>
+                <span className="font-bold" style={{color: '#ffffff'}}>{item.value} ({item.percent}%)</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Cumplimiento de SLA */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">Cumplimiento de SLA</h3>
+        <div className="p-6 rounded-2xl border shadow-sm" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
+          <h3 className="text-lg font-bold mb-6" style={{color: '#ffffff'}}>Cumplimiento de SLA</h3>
           <div className="h-64 flex flex-col justify-center items-center">
-            <div className={`relative w-48 h-48 rounded-full border-[12px] ${slaColor} flex flex-col items-center justify-center`}>
-              <span className="text-4xl font-black text-slate-800">{kpis.slaCompliance}%</span>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter mt-1">On Target</span>
+            <div className={`relative w-48 h-48 rounded-full border-[12px] flex flex-col items-center justify-center`} style={{
+              borderColor: slaStatus === 'en_cumplimiento' ? '#22c55e' : slaStatus === 'riesgo' ? '#f59e0b' : '#ef4444'
+            }}>
+              <span className="text-4xl font-black" style={{color: '#ffffff'}}>{kpis.slaCompliance}%</span>
+              <span className="text-xs font-bold uppercase tracking-tighter mt-1" style={{color: '#94a3b8'}}>On Target</span>
             </div>
             <div className="mt-6 text-center space-y-2">
-              <p className="text-sm text-slate-600">
-                Objetivo: <span className="font-bold text-slate-800">{slaObjective}%</span>
+              <p className="text-sm" style={{color: '#94a3b8'}}>
+                Objetivo: <span className="font-bold" style={{color: '#ffffff'}}>{slaObjective}%</span>
               </p>
-              <p className={`text-sm font-semibold ${
-                slaStatus === 'en_cumplimiento' ? 'text-green-600' :
-                slaStatus === 'riesgo' ? 'text-amber-600' : 'text-red-600'
-              }`}>
+              <p className="text-sm font-semibold" style={{
+                color: slaStatus === 'en_cumplimiento' ? '#22c55e' :
+                slaStatus === 'riesgo' ? '#f59e0b' : '#ef4444'
+              }}>
                 {slaText}
               </p>
               {slaStatus !== 'en_cumplimiento' && (
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs mt-1" style={{color: '#94a3b8'}}>
                   {kpis.slaCompliance < slaObjective 
                     ? `Faltan ${(slaObjective - kpis.slaCompliance).toFixed(1)}% para alcanzar el objetivo`
                     : ''}

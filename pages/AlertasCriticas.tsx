@@ -146,18 +146,18 @@ const AlertasCriticas: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-slate-50 via-orange-50/30 to-slate-50 border-2 border-slate-200 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
-          <div className="w-12 h-12 bg-slate-200 rounded-xl animate-pulse"></div>
+        <div className="border-2 p-4 rounded-2xl flex items-center gap-4 shadow-sm" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
+          <div className="w-12 h-12 rounded-xl animate-pulse" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
           <div className="flex-1 space-y-2">
-            <div className="h-6 bg-slate-200 rounded w-64 animate-pulse"></div>
-            <div className="h-4 bg-slate-200 rounded w-48 animate-pulse"></div>
+            <div className="h-6 rounded w-64 animate-pulse" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
+            <div className="h-4 rounded w-48 animate-pulse" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
           </div>
-          <div className="w-16 h-16 bg-slate-200 rounded-xl animate-pulse"></div>
+          <div className="w-16 h-16 rounded-xl animate-pulse" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
         </div>
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-white p-6 rounded-2xl border-2 border-slate-200 animate-pulse">
-            <div className="h-6 bg-slate-200 rounded w-3/4 mb-4"></div>
-            <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+          <div key={i} className="p-6 rounded-2xl border-2 animate-pulse" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
+            <div className="h-6 rounded w-3/4 mb-4" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
+            <div className="h-4 rounded w-1/2" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
           </div>
         ))}
       </div>
@@ -167,32 +167,32 @@ const AlertasCriticas: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Banner de Monitoreo Compacto */}
-      <div className="bg-gradient-to-r from-slate-50 via-orange-50/30 to-slate-50 border-2 border-slate-200 p-4 rounded-2xl flex items-center gap-4 shadow-sm">
-        <div className="w-12 h-12 bg-slate-800 text-white rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+      <div className="border-2 p-4 rounded-2xl flex items-center gap-4 shadow-sm" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
+        <div className="w-12 h-12 text-white rounded-xl flex items-center justify-center shadow-lg flex-shrink-0" style={{backgroundColor: 'rgb(15, 23, 42)'}}>
           <ShieldAlert className="w-6 h-6" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-xl font-bold mb-1 text-slate-800">
+          <h3 className="text-xl font-bold mb-1" style={{color: '#ffffff'}}>
             Monitoreo de SLA en Tiempo Real
           </h3>
           <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="font-semibold text-orange-600">
+            <span className="font-semibold" style={{color: '#f97316'}}>
               <AnimatedNumber value={casosFueraSLA} /> fuera de SLA
             </span>
-            <span className="text-slate-400">•</span>
-            <span className="font-semibold text-amber-600">
+            <span style={{color: '#64748b'}}>•</span>
+            <span className="font-semibold" style={{color: '#f59e0b'}}>
               <AnimatedNumber value={casosVencen24h} /> vencen en &lt;24h
             </span>
           </div>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="bg-white px-3 py-1.5 rounded-lg border-2 border-slate-200">
-            <p className="text-[10px] font-bold tracking-tight mb-0.5 text-slate-500">Total</p>
-            <p className="text-xl font-bold text-slate-800">
+          <div className="px-3 py-1.5 rounded-lg border-2" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
+            <p className="text-[10px] font-bold tracking-tight mb-0.5" style={{color: '#94a3b8'}}>Total</p>
+            <p className="text-xl font-bold" style={{color: '#ffffff'}}>
               <AnimatedNumber value={criticos.length} />
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-600">
+          <div className="flex items-center gap-2 text-xs" style={{color: '#94a3b8'}}>
             <Circle className={`w-2 h-2 ${getMinutesAgo() === 'Ahora' ? 'fill-green-500 text-green-500' : 'fill-amber-500 text-amber-500'}`} />
             <span className="font-medium">Actualizado hace {getMinutesAgo()}</span>
           </div>
@@ -213,10 +213,18 @@ const AlertasCriticas: React.FC = () => {
             <div 
               key={caso.id}
               onClick={() => navigate(`/app/casos/${caso.id}`)}
-              className="bg-white p-5 rounded-2xl border-2 border-slate-200/50 shadow-sm hover:shadow-xl hover:border-slate-300 transition-all duration-200 cursor-pointer group border-l-4"
+              className="p-5 rounded-2xl border-2 shadow-sm hover:shadow-xl transition-all duration-200 cursor-pointer group border-l-4"
               style={{
+                backgroundColor: 'rgba(30, 41, 59, 0.4)',
+                borderColor: 'rgba(148, 163, 184, 0.15)',
                 borderLeftColor: borderColor,
                 animationDelay: `${idx * 30}ms`
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.4)';
               }}
             >
               <div className="flex items-start gap-4">
@@ -228,23 +236,23 @@ const AlertasCriticas: React.FC = () => {
                 {/* Contenido Principal */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-base font-bold text-slate-900">{caso.ticketNumber || caso.id}</span>
+                    <span className="text-base font-bold" style={{color: '#ffffff'}}>{caso.ticketNumber || caso.id}</span>
                     {getPriorityBadge(caso.priority)}
                     <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border shadow-sm ${STATE_COLORS[caso.status]}`}>
                       {caso.status}
                     </span>
                     {caso.diasAbierto >= caso.categoria.slaDias && (
-                      <span className="px-2 py-0.5 text-[10px] font-bold bg-orange-600 text-white rounded border border-orange-700 uppercase">
+                      <span className="px-2 py-0.5 text-[10px] font-bold text-white rounded border uppercase" style={{backgroundColor: '#ea580c', borderColor: '#c2410c'}}>
                         SLA Vencido
                       </span>
                     )}
                   </div>
                   
-                  <h4 className="font-semibold text-slate-900 text-lg mb-2 truncate">{caso.subject}</h4>
+                  <h4 className="font-semibold text-lg mb-2 truncate" style={{color: '#ffffff'}}>{caso.subject}</h4>
                   
                   <div className="flex items-center gap-4 flex-wrap text-sm">
-                    <span className="text-slate-600">
-                      Cliente: <span className="font-bold text-slate-800">{caso.clientName}</span>
+                    <span style={{color: '#94a3b8'}}>
+                      Cliente: <span className="font-bold" style={{color: '#cbd5e1'}}>{caso.clientName}</span>
                     </span>
                     
                     {/* Semáforo Visual de Tiempo */}
@@ -266,22 +274,24 @@ const AlertasCriticas: React.FC = () => {
                     const agentStats = getAgentStats(agentId, agentName, criticos);
                     
                     return (
-                      <div className="mt-3 flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="mt-3 flex items-center gap-3 p-2.5 rounded-xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                           {agentName.charAt(0)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-slate-800 truncate">{agentName}</p>
+                          <p className="text-sm font-bold truncate" style={{color: '#ffffff'}}>{agentName}</p>
                           <div className="flex items-center gap-3 mt-1 text-xs">
-                            <span className="text-slate-600">
-                              <span className="font-bold text-slate-800">{agentStats.activos}</span> activos
+                            <span style={{color: '#94a3b8'}}>
+                              <span className="font-bold" style={{color: '#cbd5e1'}}>{agentStats.activos}</span> activos
                             </span>
                             {agentStats.criticos > 0 && (
-                              <span className="text-orange-600">
+                              <span style={{color: '#f97316'}}>
                                 <span className="font-bold">{agentStats.criticos}</span> críticos
                               </span>
                             )}
-                            <span className={`font-bold ${agentStats.cumplimiento >= 80 ? 'text-green-600' : agentStats.cumplimiento >= 60 ? 'text-amber-600' : 'text-orange-600'}`}>
+                            <span className="font-bold" style={{
+                              color: agentStats.cumplimiento >= 80 ? '#22c55e' : agentStats.cumplimiento >= 60 ? '#f59e0b' : '#f97316'
+                            }}>
                               {agentStats.cumplimiento}% SLA
                             </span>
                           </div>
@@ -295,21 +305,48 @@ const AlertasCriticas: React.FC = () => {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={(e) => handleQuickAction(e, 'reasignar', caso.id)}
-                    className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all group/btn"
+                    className="p-2 rounded-lg transition-all group/btn"
+                    style={{color: '#94a3b8'}}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#cbd5e1';
+                      e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#94a3b8';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                     title="Reasignar caso"
                   >
                     <Users className="w-4 h-4" />
                   </button>
                   <button
                     onClick={(e) => handleQuickAction(e, 'escalar', caso.id)}
-                    className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all group/btn"
+                    className="p-2 rounded-lg transition-all group/btn"
+                    style={{color: '#94a3b8'}}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#f97316';
+                      e.currentTarget.style.backgroundColor = 'rgba(249, 115, 22, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#94a3b8';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                     title="Escalar caso"
                   >
                     <ArrowUpRight className="w-4 h-4" />
                   </button>
                   <button
                     onClick={(e) => handleQuickAction(e, 'notificar', caso.id)}
-                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all group/btn"
+                    className="p-2 rounded-lg transition-all group/btn"
+                    style={{color: '#94a3b8'}}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#3b82f6';
+                      e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#94a3b8';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                     title="Notificar agente"
                   >
                     <Send className="w-4 h-4" />
@@ -319,7 +356,16 @@ const AlertasCriticas: React.FC = () => {
                       e.stopPropagation();
                       navigate(`/app/casos/${caso.id}`);
                     }}
-                    className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all group/btn"
+                    className="p-2 rounded-lg transition-all group/btn"
+                    style={{color: '#94a3b8'}}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#cbd5e1';
+                      e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#94a3b8';
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                     title="Ver detalle"
                   >
                     <Eye className="w-4 h-4" />
@@ -329,15 +375,22 @@ const AlertasCriticas: React.FC = () => {
             </div>
           );
         }) : (
-          <div className="bg-white p-16 text-center rounded-2xl border-2 border-dashed border-slate-200">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-10 h-10 text-green-600" />
+          <div className="p-16 text-center rounded-2xl border-2 border-dashed" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{backgroundColor: 'rgba(34, 197, 94, 0.2)'}}>
+              <CheckCircle2 className="w-10 h-10" style={{color: '#22c55e'}} />
             </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">No hay alertas críticas</h3>
-            <p className="text-slate-500 font-medium mb-4">Todos los casos están bajo control y dentro del SLA.</p>
+            <h3 className="text-xl font-bold mb-2" style={{color: '#ffffff'}}>No hay alertas críticas</h3>
+            <p className="font-medium mb-4" style={{color: '#94a3b8'}}>Todos los casos están bajo control y dentro del SLA.</p>
             <button
               onClick={loadData}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-colors"
+              style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', color: '#cbd5e1'}}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+              }}
             >
               <RefreshCw className="w-4 h-4" />
               Actualizar

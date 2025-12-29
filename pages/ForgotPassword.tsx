@@ -84,8 +84,13 @@ const ForgotPassword: React.FC = () => {
       {/* Contenedor del formulario con overlay para legibilidad */}
       <div className="max-w-sm w-full relative z-10">
         <div 
-          className="bg-black/80 backdrop-blur-md rounded-3xl shadow-2xl p-6 border border-black/50 transition-all duration-400 ease-in-out animate-in zoom-in-95 fade-in"
+          className="rounded-3xl p-6 transition-all duration-400 ease-in-out animate-in zoom-in-95 fade-in"
           style={{
+            background: 'rgba(15, 15, 15, 0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(100, 0, 0, 0.2)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(200, 21, 27, 0.05)',
             opacity: isExiting ? 0 : 1,
             transform: isExiting ? 'scale(0.95) translateY(-30px)' : 'scale(1) translateY(0)',
           }}
@@ -98,8 +103,8 @@ const ForgotPassword: React.FC = () => {
           </Link>
 
           {/* Logo de la Empresa */}
-          <div className="text-center mb-6 animate-in fade-in slide-in-from-top">
-            <div className="inline-flex items-center justify-center mb-6">
+          <div className="text-center mb-8 animate-in fade-in slide-in-from-top">
+            <div className="inline-flex items-center justify-center mb-4">
               <img 
                 src="https://static.wixstatic.com/media/98a19d_504d5e7478054d2484448813ac235267~mv2.png/v1/fill/w_192,h_176,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/red256.png"
                 alt="INTELFON Logo"
@@ -113,16 +118,16 @@ const ForgotPassword: React.FC = () => {
             </div>
           </div>
 
-          <div className="mb-6 animate-in fade-in slide-in-from-top">
-            <h2 className="text-3xl font-semibold leading-tight mb-3 animate-in slide-in-from-bottom fade-in" style={{animationDelay: '100ms', color: 'var(--color-brand-red)'}}>¿Problemas para entrar?</h2>
+          <div className="mb-8 animate-in fade-in slide-in-from-top">
+            <h2 className="text-3xl font-semibold leading-tight mb-4 animate-in slide-in-from-bottom fade-in" style={{animationDelay: '100ms', color: 'var(--color-brand-red)'}}>¿Problemas para entrar?</h2>
             <p className="text-slate-300 mt-2 font-medium leading-relaxed animate-in slide-in-from-bottom fade-in" style={{animationDelay: '200ms'}}>
               Ingresa tu correo institucional y te enviaremos un código para restablecer tu contraseña.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-xs font-medium text-slate-400 tracking-normal mb-2">Correo Institucional</label>
+              <label className="block text-xs font-medium text-slate-300 tracking-normal mb-2">Correo Institucional</label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
@@ -131,13 +136,16 @@ const ForgotPassword: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ejemplo@intelfon.com"
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:bg-slate-750 transition-all font-medium border-slate-700"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border text-white placeholder:text-slate-500 focus:outline-none transition-all font-medium border-slate-600"
+                  style={{
+                    background: 'rgba(30, 30, 30, 0.9)',
+                  }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = 'var(--color-brand-red)';
-                    e.target.style.boxShadow = '0 0 0 4px rgba(200, 21, 27, 0.1)';
+                    e.target.style.borderColor = 'rgba(200, 21, 27, 0.6)';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(200, 21, 27, 0.15), 0 0 12px rgba(200, 21, 27, 0.1)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = 'rgb(51, 65, 85)';
+                    e.target.style.borderColor = 'rgb(71, 85, 105)';
                     e.target.style.boxShadow = '';
                   }}
                 />
@@ -192,15 +200,29 @@ const ForgotPassword: React.FC = () => {
             <button
               type="submit"
               disabled={loading || status === 'success'}
-              className="w-full text-white font-semibold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 hover:-translate-y-0.5 hover:shadow-2xl"
-              style={{background: 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)'}}
+              className="w-full text-white font-semibold py-5 rounded-2xl transition-all flex items-center justify-center disabled:cursor-not-allowed"
+              style={{
+                background: loading || status === 'success'
+                  ? 'linear-gradient(to right, rgba(100, 100, 100, 0.4), rgba(120, 120, 120, 0.4))'
+                  : 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))',
+                boxShadow: loading || status === 'success'
+                  ? 'none'
+                  : '0 4px 14px rgba(200, 21, 27, 0.3), 0 0 20px rgba(200, 21, 27, 0.15)',
+                opacity: loading || status === 'success' ? 0.5 : 1,
+              }}
               onMouseEnter={(e) => {
-                if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-red), var(--color-brand-red))';
+                if (!e.currentTarget.disabled && !loading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(200, 21, 27, 0.4), 0 0 25px rgba(200, 21, 27, 0.2)';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)';
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = loading || status === 'success'
+                    ? 'none'
+                    : '0 4px 14px rgba(200, 21, 27, 0.3), 0 0 20px rgba(200, 21, 27, 0.15)';
+                }
               }}
             >
               {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Enviar Código de Recuperación'}

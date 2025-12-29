@@ -84,15 +84,20 @@ const VerifyCode: React.FC = () => {
       {/* Contenedor del formulario con overlay para legibilidad */}
       <div className="max-w-sm w-full relative z-10">
         <div 
-          className="bg-black/80 backdrop-blur-md rounded-3xl shadow-2xl p-6 text-center border border-black/50 transition-all duration-300 animate-in zoom-in-95 fade-in"
+          className="rounded-3xl p-6 text-center transition-all duration-300 animate-in zoom-in-95 fade-in"
           style={{
+            background: 'rgba(15, 15, 15, 0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(100, 0, 0, 0.2)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(200, 21, 27, 0.05)',
             opacity: isEntering ? 0 : 1,
             transform: isEntering ? 'scale(0.9) translateY(30px)' : 'scale(1) translateY(0)',
           }}
         >
           {/* Logo de la Empresa */}
-          <div className="text-center mb-6 animate-in fade-in slide-in-from-top">
-            <div className="inline-flex items-center justify-center mb-6">
+          <div className="text-center mb-8 animate-in fade-in slide-in-from-top">
+            <div className="inline-flex items-center justify-center mb-4">
               <img 
                 src="https://static.wixstatic.com/media/98a19d_504d5e7478054d2484448813ac235267~mv2.png/v1/fill/w_192,h_176,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/red256.png"
                 alt="INTELFON Logo"
@@ -107,7 +112,7 @@ const VerifyCode: React.FC = () => {
           </div>
 
           <h2 
-            className="text-3xl font-semibold mb-3 animate-in slide-in-from-bottom fade-in transition-all duration-500"
+            className="text-3xl font-semibold mb-4 animate-in slide-in-from-bottom fade-in transition-all duration-500"
             style={{
               color: 'var(--color-brand-red)',
               animationDelay: '100ms',
@@ -126,7 +131,7 @@ const VerifyCode: React.FC = () => {
 
           <form 
             onSubmit={handleVerify} 
-            className="mt-10 space-y-6 text-left transition-all duration-500"
+            className="mt-10 space-y-5 text-left transition-all duration-500"
             style={{
               animation: isEntering ? 'none' : 'fadeIn 0.5s ease-out 0.5s both',
             }}
@@ -134,7 +139,7 @@ const VerifyCode: React.FC = () => {
             {/* Campo de código */}
             <div>
               <label 
-                className="block text-xs font-medium text-slate-400 tracking-normal mb-3 text-center transition-all duration-300"
+                className="block text-xs font-medium text-slate-300 tracking-normal mb-3 text-center transition-all duration-300"
                 style={{
                   animation: isEntering ? 'none' : 'slideInFromBottom 0.4s ease-out 0.6s both',
                 }}
@@ -148,17 +153,18 @@ const VerifyCode: React.FC = () => {
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
                 placeholder="000000"
-                className="w-full text-center text-4xl font-semibold tracking-[0.5em] py-4 rounded-2xl border-2 border-slate-700 bg-slate-800 text-white focus:outline-none focus:bg-slate-750 transition-all duration-300"
+                className="w-full text-center text-4xl font-semibold tracking-[0.5em] py-4 rounded-2xl border-2 text-white focus:outline-none transition-all duration-300 border-slate-600"
                 style={{
+                  background: 'rgba(30, 30, 30, 0.9)',
                   animation: isEntering ? 'none' : 'scale-in 0.4s ease-out 0.7s both',
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = 'var(--color-brand-red)';
-                  e.target.style.boxShadow = '0 0 0 4px rgba(200, 21, 27, 0.1)';
+                  e.target.style.borderColor = 'rgba(200, 21, 27, 0.6)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(200, 21, 27, 0.15), 0 0 12px rgba(200, 21, 27, 0.1)';
                   e.target.style.transform = 'scale(1.02)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = 'rgb(51, 65, 85)';
+                  e.target.style.borderColor = 'rgb(71, 85, 105)';
                   e.target.style.boxShadow = '';
                   e.target.style.transform = 'scale(1)';
                 }}
@@ -186,26 +192,28 @@ const VerifyCode: React.FC = () => {
             <button
               type="submit"
               disabled={loading || code.length < 6}
-              className="w-full text-white font-semibold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center hover:-translate-y-0.5 hover:shadow-2xl"
+              className="w-full text-white font-semibold py-5 rounded-2xl transition-all flex items-center justify-center disabled:cursor-not-allowed"
               style={{
                 background: loading || code.length < 6
-                  ? 'linear-gradient(to right, var(--color-accent-gray), var(--color-brand-gray))'
-                  : 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)',
-                cursor: loading || code.length < 6 ? 'not-allowed' : 'pointer',
-                opacity: loading || code.length < 6 ? 0.7 : 1
+                  ? 'linear-gradient(to right, rgba(100, 100, 100, 0.4), rgba(120, 120, 120, 0.4))'
+                  : 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))',
+                boxShadow: loading || code.length < 6
+                  ? 'none'
+                  : '0 4px 14px rgba(200, 21, 27, 0.3), 0 0 20px rgba(200, 21, 27, 0.15)',
+                opacity: loading || code.length < 6 ? 0.5 : 1,
               }}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled && !loading && code.length >= 6) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-red), var(--color-brand-red))';
                   e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(200, 21, 27, 0.4), 0 0 25px rgba(200, 21, 27, 0.2)';
                 }
               }}
               onMouseLeave={(e) => {
-                if (!e.currentTarget.disabled && !loading) {
-                  e.currentTarget.style.background = loading || code.length < 6
-                    ? 'linear-gradient(to right, var(--color-accent-gray), var(--color-brand-gray))'
-                    : 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)';
+                if (!e.currentTarget.disabled) {
                   e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = loading || code.length < 6
+                    ? 'none'
+                    : '0 4px 14px rgba(200, 21, 27, 0.3), 0 0 20px rgba(200, 21, 27, 0.15)';
                 }
               }}
             >
@@ -228,14 +236,17 @@ const VerifyCode: React.FC = () => {
               style={{
                 color: 'var(--color-accent-blue)',
                 backgroundColor: 'transparent',
+                border: '1px solid rgba(100, 116, 139, 0.2)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = 'var(--color-brand-red)';
-                e.currentTarget.style.backgroundColor = 'rgba(16, 122, 180, 0.1)';
+                e.currentTarget.style.backgroundColor = 'rgba(200, 21, 27, 0.1)';
+                e.currentTarget.style.borderColor = 'rgba(200, 21, 27, 0.3)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = 'var(--color-accent-blue)';
                 e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.2)';
               }}
             >
               Solicitar un nuevo código

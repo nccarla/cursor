@@ -191,10 +191,19 @@ const Login: React.FC = () => {
       
       {/* Contenedor del formulario con overlay para legibilidad */}
       <div className="max-w-sm w-full relative z-10">
-        <div className="bg-black/80 backdrop-blur-md rounded-3xl shadow-2xl p-6 border border-black/50 animate-in zoom-in-95 fade-in">
+        <div 
+          className="rounded-3xl p-6 animate-in zoom-in-95 fade-in"
+          style={{
+            background: 'rgba(15, 15, 15, 0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(100, 0, 0, 0.2)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(200, 21, 27, 0.05)',
+          }}
+        >
           {/* Logo y Nombre de la Empresa */}
-          <div className="text-center mb-6 animate-in fade-in slide-in-from-top">
-            <div className="inline-flex items-center justify-center mb-3">
+          <div className="text-center mb-8 animate-in fade-in slide-in-from-top">
+            <div className="inline-flex items-center justify-center mb-4">
               <img 
                 src="https://static.wixstatic.com/media/98a19d_504d5e7478054d2484448813ac235267~mv2.png/v1/fill/w_192,h_176,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/red256.png"
                 alt="INTELFON Logo"
@@ -210,13 +219,13 @@ const Login: React.FC = () => {
               Sistema de Gestión SAC
             </p>
             {/* Indicador de conexión segura */}
-            <div className="flex items-center justify-center gap-2 mt-2 text-xs text-slate-400">
+            <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-400">
               <ShieldCheck className="w-3 h-3 text-green-500" />
               <span>Conexión segura</span>
             </div>
           </div>
           
-          <form ref={formRef} onSubmit={handleLogin} className="space-y-4">
+          <form ref={formRef} onSubmit={handleLogin} className="space-y-5">
             {error && (
               <div className="bg-gradient-to-r from-red-50 to-rose-50 text-red-700 p-4 rounded-2xl flex items-center gap-3 border-2 border-red-200 shadow-sm animate-in slide-in-from-top duration-300">
                 <AlertCircle className="w-5 h-5 shrink-0" style={{color: 'var(--color-brand-red)'}} />
@@ -235,19 +244,22 @@ const Login: React.FC = () => {
                   onChange={handleEmailChange}
                   onBlur={handleEmailBlur}
                   placeholder="ejemplo@intelfon.com"
-                  className={`w-full pl-12 pr-4 py-4 rounded-2xl border bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:bg-slate-750 transition-all font-medium ${
-                    emailError ? 'border-red-500' : emailTouched && validateEmail(email) ? 'border-green-500' : 'border-slate-700'
+                  className={`w-full pl-12 pr-4 py-4 rounded-2xl border text-white placeholder:text-slate-500 focus:outline-none transition-all font-medium ${
+                    emailError ? 'border-red-500' : emailTouched && validateEmail(email) ? 'border-green-500' : 'border-slate-600'
                   }`}
+                  style={{
+                    background: 'rgba(30, 30, 30, 0.9)',
+                  }}
                   onFocus={(e) => {
                     if (!emailError) {
-                      e.target.style.borderColor = 'var(--color-brand-red)';
-                      e.target.style.boxShadow = '0 0 0 4px rgba(200, 21, 27, 0.1)';
+                      e.target.style.borderColor = 'rgba(200, 21, 27, 0.6)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(200, 21, 27, 0.15), 0 0 12px rgba(200, 21, 27, 0.1)';
                     }
                   }}
                   onBlur={(e) => {
                     handleEmailBlur(e);
                     if (!emailError) {
-                      e.target.style.borderColor = emailTouched && validateEmail(email) ? 'rgb(34, 197, 94)' : 'rgb(51, 65, 85)';
+                      e.target.style.borderColor = emailTouched && validateEmail(email) ? 'rgb(34, 197, 94)' : 'rgb(71, 85, 105)';
                       e.target.style.boxShadow = '';
                     }
                   }}
@@ -282,19 +294,22 @@ const Login: React.FC = () => {
                   onChange={handlePasswordChange}
                   onBlur={handlePasswordBlur}
                   placeholder="••••••••"
-                  className={`w-full pl-12 pr-12 py-4 rounded-2xl border bg-slate-800 text-white placeholder:text-slate-500 focus:outline-none focus:bg-slate-750 transition-all font-medium ${
-                    passwordError ? 'border-red-500' : passwordTouched && validatePassword(password) ? 'border-green-500' : 'border-slate-700'
+                  className={`w-full pl-12 pr-12 py-4 rounded-2xl border text-white placeholder:text-slate-500 focus:outline-none transition-all font-medium ${
+                    passwordError ? 'border-red-500' : passwordTouched && validatePassword(password) ? 'border-green-500' : 'border-slate-600'
                   }`}
+                  style={{
+                    background: 'rgba(30, 30, 30, 0.9)',
+                  }}
                   onFocus={(e) => {
                     if (!passwordError) {
-                      e.target.style.borderColor = 'var(--color-brand-red)';
-                      e.target.style.boxShadow = '0 0 0 4px rgba(200, 21, 27, 0.1)';
+                      e.target.style.borderColor = 'rgba(200, 21, 27, 0.6)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(200, 21, 27, 0.15), 0 0 12px rgba(200, 21, 27, 0.1)';
                     }
                   }}
                   onBlur={(e) => {
                     handlePasswordBlur(e);
                     if (!passwordError) {
-                      e.target.style.borderColor = passwordTouched && validatePassword(password) ? 'rgb(34, 197, 94)' : 'rgb(51, 65, 85)';
+                      e.target.style.borderColor = passwordTouched && validatePassword(password) ? 'rgb(34, 197, 94)' : 'rgb(71, 85, 105)';
                       e.target.style.boxShadow = '';
                     }
                   }}
@@ -325,22 +340,28 @@ const Login: React.FC = () => {
             <button
               type="submit"
               disabled={loading || !isFormValid() || isSubmitting}
-              className="w-full text-white font-semibold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 hover:shadow-2xl disabled:hover:translate-y-0 disabled:hover:shadow-xl"
+              className="w-full text-white font-semibold py-5 rounded-2xl transition-all flex items-center justify-center disabled:cursor-not-allowed"
               style={{
                 background: loading || !isFormValid() || isSubmitting
-                  ? 'linear-gradient(to right, var(--color-accent-gray), var(--color-brand-gray))'
-                  : 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)'
+                  ? 'linear-gradient(to right, rgba(100, 100, 100, 0.4), rgba(120, 120, 120, 0.4))'
+                  : 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))',
+                boxShadow: loading || !isFormValid() || isSubmitting
+                  ? 'none'
+                  : '0 4px 14px rgba(200, 21, 27, 0.3), 0 0 20px rgba(200, 21, 27, 0.15)',
+                opacity: loading || !isFormValid() || isSubmitting ? 0.5 : 1,
               }}
               onMouseEnter={(e) => {
                 if (!e.currentTarget.disabled && !loading) {
-                  e.currentTarget.style.background = 'linear-gradient(to right, var(--color-accent-red), var(--color-brand-red))';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(200, 21, 27, 0.4), 0 0 25px rgba(200, 21, 27, 0.2)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!e.currentTarget.disabled) {
-                  e.currentTarget.style.background = loading || !isFormValid() || isSubmitting
-                    ? 'linear-gradient(to right, var(--color-accent-gray), var(--color-brand-gray))'
-                    : 'linear-gradient(to right, var(--color-brand-red) 0%, var(--color-brand-red) 75%, var(--color-accent-darkred) 100%)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = loading || !isFormValid() || isSubmitting
+                    ? 'none'
+                    : '0 4px 14px rgba(200, 21, 27, 0.3), 0 0 20px rgba(200, 21, 27, 0.15)';
                 }
               }}
             >
@@ -358,12 +379,26 @@ const Login: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-slate-700 text-center">
-            <p className="text-xs text-slate-300 font-medium tracking-normal mb-3">Acceso Rápido Demo</p>
-            <div className="flex flex-wrap justify-center gap-2">
+          <div className="mt-8 pt-6 text-center" style={{ borderTop: '1px solid rgba(100, 116, 139, 0.2)' }}>
+            <p className="text-xs text-slate-300 font-medium tracking-normal mb-4">Acceso Rápido Demo</p>
+            <div className="flex flex-wrap justify-center gap-2.5">
               <button 
                 onClick={() => handleDemoClick('agente@intelfon.com')}
-                className="px-4 py-2 bg-slate-800 text-xs font-medium text-slate-300 rounded-full border border-slate-700 hover:bg-slate-700 hover:text-white hover:border-red-600 transition-colors relative group"
+                className="px-5 py-2.5 text-xs font-medium text-slate-300 rounded-full border transition-all relative group"
+                style={{
+                  background: 'rgba(30, 30, 30, 0.6)',
+                  borderColor: 'rgba(100, 116, 139, 0.3)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(40, 40, 40, 0.8)';
+                  e.currentTarget.style.borderColor = 'rgba(200, 21, 27, 0.4)';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 30, 30, 0.6)';
+                  e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)';
+                  e.currentTarget.style.color = '#cbd5e1';
+                }}
                 title="Acceso rápido como Agente - Gestiona casos asignados"
               >
                 Agente
@@ -373,7 +408,21 @@ const Login: React.FC = () => {
               </button>
               <button 
                 onClick={() => handleDemoClick('supervisor@intelfon.com')}
-                className="px-4 py-2 bg-slate-800 text-xs font-medium text-slate-300 rounded-full border border-slate-700 hover:bg-slate-700 hover:text-white hover:border-red-600 transition-colors relative group"
+                className="px-5 py-2.5 text-xs font-medium text-slate-300 rounded-full border transition-all relative group"
+                style={{
+                  background: 'rgba(30, 30, 30, 0.6)',
+                  borderColor: 'rgba(100, 116, 139, 0.3)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(40, 40, 40, 0.8)';
+                  e.currentTarget.style.borderColor = 'rgba(200, 21, 27, 0.4)';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 30, 30, 0.6)';
+                  e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)';
+                  e.currentTarget.style.color = '#cbd5e1';
+                }}
                 title="Acceso rápido como Supervisor - Supervisa equipo y casos"
               >
                 Supervisor
@@ -383,7 +432,21 @@ const Login: React.FC = () => {
               </button>
               <button 
                 onClick={() => handleDemoClick('gerente@intelfon.com')}
-                className="px-4 py-2 bg-slate-800 text-xs font-medium text-slate-300 rounded-full border border-slate-700 hover:bg-slate-700 hover:text-white hover:border-red-600 transition-colors relative group"
+                className="px-5 py-2.5 text-xs font-medium text-slate-300 rounded-full border transition-all relative group"
+                style={{
+                  background: 'rgba(30, 30, 30, 0.6)',
+                  borderColor: 'rgba(100, 116, 139, 0.3)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(40, 40, 40, 0.8)';
+                  e.currentTarget.style.borderColor = 'rgba(200, 21, 27, 0.4)';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 30, 30, 0.6)';
+                  e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)';
+                  e.currentTarget.style.color = '#cbd5e1';
+                }}
                 title="Acceso rápido como Gerente - Dashboard ejecutivo"
               >
                 Gerente
