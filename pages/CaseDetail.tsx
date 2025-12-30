@@ -59,13 +59,21 @@ const CaseDetail: React.FC = () => {
   }, []);
 
   const loadCaso = async (caseId: string) => {
-    const data = await api.getCasoById(caseId);
-    if (data) {
-      setCaso(data);
-      // Generar timeline desde historial
-      if (data.history && Array.isArray(data.history)) {
-        // Los eventos ya vienen del historial
+    try {
+      const data = await api.getCasoById(caseId);
+      if (data) {
+        setCaso(data);
+        // Generar timeline desde historial
+        if (data.history && Array.isArray(data.history)) {
+          // Los eventos ya vienen del historial
+        }
+      } else {
+        alert('Caso no encontrado');
+        navigate('/app/casos');
       }
+    } catch (err: any) {
+      console.error('Error al cargar caso:', err);
+      alert(err.message || 'Error al cargar el caso. Por favor, intenta nuevamente.');
     }
   };
 
@@ -73,7 +81,7 @@ const CaseDetail: React.FC = () => {
     if (!caso) return;
     setTransitionLoading(true);
     try {
-      await api.updateCaseStatus(caso.id, newState, `Transición a ${newState}`, extraData);
+      await api.updateCaseStatus(caso.id, newState, formDetail || `Transición a ${newState}`, extraData);
       setShowResueltoModal(false);
       setShowPendienteModal(false);
       setShowEscalarModal(false);
@@ -81,8 +89,9 @@ const CaseDetail: React.FC = () => {
       setShowReasignarModal(false);
       setFormDetail('');
       await loadCaso(caso.id);
-    } catch (err) {
-      alert('Error al actualizar el estado del caso.');
+    } catch (err: any) {
+      console.error('Error al actualizar estado del caso:', err);
+      alert(err.message || 'Error al actualizar el estado del caso. Por favor, intenta nuevamente.');
     } finally {
       setTransitionLoading(false);
     }

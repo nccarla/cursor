@@ -100,10 +100,16 @@ const BandejaCasos: React.FC = () => {
 
   const loadCasos = async () => {
     setLoading(true);
-    const data = await api.getCases();
-    setCasos([...data]);
-    setLastUpdate(new Date());
-    setLoading(false);
+    try {
+      const data = await api.getCases();
+      setCasos([...data]);
+      setLastUpdate(new Date());
+    } catch (err: any) {
+      console.error('Error al cargar casos:', err);
+      // El error ya se maneja en api.getCases() con fallback a localStorage
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getRowPriority = (caso: Case): 'critical' | 'warning' | 'normal' => {
@@ -269,8 +275,9 @@ const BandejaCasos: React.FC = () => {
       setShowModal(false);
       setNewCase({ clienteId: '', categoriaId: '', contactChannel: Channel.WEB, subject: '', description: '', clientName: '', contactName: '', phone: '', email: '' });
       loadCasos();
-    } catch (err) {
-      alert('Error al crear el caso');
+    } catch (err: any) {
+      console.error('Error al crear caso:', err);
+      alert(err.message || 'Error al crear el caso. Por favor, intenta nuevamente.');
     }
   };
 

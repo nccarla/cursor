@@ -3,6 +3,7 @@ import { Case, CaseStatus, KPI, User, Role, Cliente, Categoria } from '../types'
 import { MOCK_CASOS, MOCK_AGENTES, MOCK_USERS, MOCK_CLIENTES, MOCK_CATEGORIAS } from './mockData';
 import { API_CONFIG } from '../config';
 import { emailService } from './emailService';
+import * as caseService from './caseService';
 
 // Inicializar datos en localStorage si no existen
 const initStorage = () => {
@@ -371,75 +372,160 @@ export const api = {
   },
 
   async getCases(): Promise<Case[]> {
-    initStorage();
-    const data = localStorage.getItem('intelfon_cases');
-    const cases = data ? JSON.parse(data) : [];
-    
-    // Si es agente, solo ve sus casos
-    const user = this.getUser();
-    if (user?.role === 'AGENTE') {
-      // Filtrar por ID de agente demo '1' o nombre
-      return cases.filter((c: any) => 
-        (c.agenteAsignado?.idAgente === '1') || 
-        (c.agentId === '1') ||
-        (c.agentName === user.name)
-      );
+    try {
+      // Intentar obtener casos del webhook
+      const cases = await caseService.getCases();
+      
+      // Si es agente, solo ve sus casos
+      const user = this.getUser();
+      if (user?.role === 'AGENTE') {
+        return cases.filter((c: any) => 
+          (c.agenteAsignado?.idAgente === user.id) || 
+          (c.agentId === user.id) ||
+          (c.agentName === user.name)
+        );
+      }
+      
+      return cases;
+    } catch (error: any) {
+      console.warn('⚠️ Error al obtener casos del webhook, usando fallback a localStorage:', error.message);
+      
+      // Fallback a localStorage
+      initStorage();
+      const data = localStorage.getItem('intelfon_cases');
+      const cases = data ? JSON.parse(data) : [];
+      
+      // Si es agente, solo ve sus casos
+      const user = this.getUser();
+      if (user?.role === 'AGENTE') {
+        return cases.filter((c: any) => 
+          (c.agenteAsignado?.idAgente === '1') || 
+          (c.agentId === '1') ||
+          (c.agentName === user.name)
+        );
+      }
+      return cases;
     }
-    return cases;
   },
 
   async getCasoById(id: string): Promise<Case | undefined> {
+    try {
+      // Intentar obtener el caso del webhook
+      const caso = await caseService.getCaseById(id);
+      if (caso) {
+        return caso;
+      }
+    } catch (error: any) {
+      console.warn('⚠️ Error al obtener caso del webhook, usando fallback a localStorage:', error.message);
+    }
+    
+    // Fallback a localStorage
     const cases = await this.getCases();
     return cases.find(c => c.id === id || c.idCaso === id || c.ticketNumber === id);
   },
 
   async updateCaseStatus(id: string, status: string, detail: string, extra?: any): Promise<boolean> {
-    const cases = await this.getCases();
-    const idx = cases.findIndex((c: any) => (c.id === id || c.idCaso === id || c.ticketNumber === id));
-    
-    if (idx !== -1) {
-      cases[idx].estado = status;
-      cases[idx].status = status;
-      if (!cases[idx].historial) cases[idx].historial = [];
+    try {
+      // Intentar actualizar el caso en el webhook
+      await caseService.updateCaseStatus(id, status, detail);
       
-      cases[idx].historial.unshift({
-        fechaHora: new Date().toISOString(),
-        detalle: detail || `Cambio de estado a ${status}`,
-        usuario: this.getUser()?.name || 'Sistema'
-      });
+      // También actualizar en localStorage como respaldo
+      const cases = await this.getCases();
+      const idx = cases.findIndex((c: any) => (c.id === id || c.idCaso === id || c.ticketNumber === id));
+      
+      if (idx !== -1) {
+        cases[idx].estado = status;
+        cases[idx].status = status;
+        if (!cases[idx].historial) cases[idx].historial = [];
+        
+        cases[idx].historial.unshift({
+          fechaHora: new Date().toISOString(),
+          detalle: detail || `Cambio de estado a ${status}`,
+          usuario: this.getUser()?.name || 'Sistema'
+        });
 
-      if (extra?.resolucion) cases[idx].resolucion = extra.resolucion;
+        if (extra?.resolucion) cases[idx].resolucion = extra.resolucion;
+        
+        localStorage.setItem('intelfon_cases', JSON.stringify(cases));
+      }
       
-      localStorage.setItem('intelfon_cases', JSON.stringify(cases));
       return true;
+    } catch (error: any) {
+      console.warn('⚠️ Error al actualizar caso en el webhook, usando fallback a localStorage:', error.message);
+      
+      // Fallback a localStorage
+      const cases = await this.getCases();
+      const idx = cases.findIndex((c: any) => (c.id === id || c.idCaso === id || c.ticketNumber === id));
+      
+      if (idx !== -1) {
+        cases[idx].estado = status;
+        cases[idx].status = status;
+        if (!cases[idx].historial) cases[idx].historial = [];
+        
+        cases[idx].historial.unshift({
+          fechaHora: new Date().toISOString(),
+          detalle: detail || `Cambio de estado a ${status}`,
+          usuario: this.getUser()?.name || 'Sistema'
+        });
+
+        if (extra?.resolucion) cases[idx].resolucion = extra.resolucion;
+        
+        localStorage.setItem('intelfon_cases', JSON.stringify(cases));
+        return true;
+      }
+      return false;
     }
-    return false;
   },
 
   async createCase(caseData: any): Promise<boolean> {
-    const cases = await this.getCases();
-    const newId = `CASO-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newEntry = {
-      ...caseData,
-      idCaso: newId,
-      id: newId,
-      ticketNumber: newId,
-      agenteAsignado: MOCK_AGENTES[0],
-      agentId: MOCK_AGENTES[0].idAgente,
-      agentName: MOCK_AGENTES[0].nombre,
-      categoria: { nombre: 'General', slaDias: 2 },
-      category: 'General',
-      diasAbierto: 0,
-      createdAt: new Date().toISOString(),
-      historial: [{
-        fechaHora: new Date().toISOString(),
-        detalle: 'Caso creado manualmente en sistema',
-        usuario: this.getUser()?.name || 'Sistema'
-      }]
-    };
-    cases.unshift(newEntry);
-    localStorage.setItem('intelfon_cases', JSON.stringify(cases));
-    return true;
+    try {
+      // Intentar crear el caso en el webhook
+      const newCase = await caseService.createCase({
+        clienteId: caseData.clienteId,
+        categoriaId: caseData.categoriaId,
+        contactChannel: caseData.contactChannel,
+        subject: caseData.subject,
+        description: caseData.description,
+        clientEmail: caseData.clientEmail || caseData.email,
+        clientName: caseData.clientName,
+        contactName: caseData.contactName,
+        phone: caseData.phone,
+      });
+      
+      // También guardar en localStorage como respaldo
+      const cases = await this.getCases();
+      cases.unshift(newCase);
+      localStorage.setItem('intelfon_cases', JSON.stringify(cases));
+      
+      return true;
+    } catch (error: any) {
+      console.warn('⚠️ Error al crear caso en el webhook, usando fallback a localStorage:', error.message);
+      
+      // Fallback a localStorage
+      const cases = await this.getCases();
+      const newId = `CASO-${Math.floor(1000 + Math.random() * 9000)}`;
+      const newEntry = {
+        ...caseData,
+        idCaso: newId,
+        id: newId,
+        ticketNumber: newId,
+        agenteAsignado: MOCK_AGENTES[0],
+        agentId: MOCK_AGENTES[0].idAgente,
+        agentName: MOCK_AGENTES[0].nombre,
+        categoria: { nombre: 'General', slaDias: 2 },
+        category: 'General',
+        diasAbierto: 0,
+        createdAt: new Date().toISOString(),
+        historial: [{
+          fechaHora: new Date().toISOString(),
+          detalle: 'Caso creado manualmente en sistema',
+          usuario: this.getUser()?.name || 'Sistema'
+        }]
+      };
+      cases.unshift(newEntry);
+      localStorage.setItem('intelfon_cases', JSON.stringify(cases));
+      return true;
+    }
   },
 
   async getKPIs(): Promise<KPI> {
