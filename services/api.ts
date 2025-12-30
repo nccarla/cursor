@@ -4,6 +4,7 @@ import { MOCK_CASOS, MOCK_AGENTES, MOCK_USERS, MOCK_CLIENTES, MOCK_CATEGORIAS } 
 import { API_CONFIG } from '../config';
 import { emailService } from './emailService';
 import * as caseService from './caseService';
+import * as roundRobinService from './roundRobinService';
 
 // Inicializar datos en localStorage si no existen
 const initStorage = () => {
@@ -606,6 +607,18 @@ export const api = {
   },
 
   async getAgentes(): Promise<any[]> {
+    try {
+      // Intentar obtener agentes del webhook de Round Robin
+      const agents = await roundRobinService.getAgents();
+      
+      if (agents && agents.length > 0) {
+        return agents;
+      }
+    } catch (error: any) {
+      console.warn('⚠️ Error al obtener agentes del webhook de Round Robin, usando fallback a localStorage:', error.message);
+    }
+    
+    // Fallback a localStorage
     initStorage();
     const data = localStorage.getItem('intelfon_agents');
     return data ? JSON.parse(data) : MOCK_AGENTES;
@@ -624,6 +637,67 @@ export const api = {
   },
 
   async updateAgente(id: string, data: any): Promise<boolean> {
+    // Si se está actualizando el estado (activo/inactivo/vacaciones), usar el webhook de Round Robin
+    if (data.estado !== undefined || data.activo !== undefined || data.vacaciones !== undefined) {
+      try {
+        // Determinar activo y vacaciones desde el estado o los datos directos
+        let activo = data.activo;
+        let vacaciones = data.vacaciones;
+        
+        if (data.estado) {
+          // Si viene como estado, mapear a activo/vacaciones
+          if (data.estado === 'Vacaciones') {
+            activo = true;
+            vacaciones = true;
+          } else if (data.estado === 'Activo') {
+            activo = true;
+            vacaciones = false;
+          } else if (data.estado === 'Inactivo') {
+            activo = false;
+            vacaciones = false;
+          }
+        }
+        
+        // Si no se especificó activo, usar el estado actual del agente
+        if (activo === undefined) {
+          const agentes = await this.getAgentes();
+          const agente = agentes.find(a => a.idAgente === id);
+          if (agente) {
+            activo = agente.estado === 'Activo' || agente.estado === 'Vacaciones';
+            vacaciones = agente.estado === 'Vacaciones';
+          } else {
+            activo = true; // Por defecto activo
+          }
+        }
+        
+        // Llamar al webhook de Round Robin para actualizar el estado
+        await roundRobinService.updateAgentStatus(id, activo, vacaciones || false);
+        
+        // También actualizar en localStorage como respaldo
+        const agentes = await this.getAgentes();
+        const idx = agentes.findIndex(a => a.idAgente === id);
+        if (idx !== -1) {
+          agentes[idx] = { ...agentes[idx], ...data };
+          localStorage.setItem('intelfon_agents', JSON.stringify(agentes));
+        }
+        
+        return true;
+      } catch (error: any) {
+        console.warn('⚠️ Error al actualizar agente en el webhook de Round Robin, usando fallback a localStorage:', error.message);
+        
+        // Fallback a localStorage
+        const agentes = await this.getAgentes();
+        const idx = agentes.findIndex(a => a.idAgente === id);
+        if (idx !== -1) {
+          agentes[idx] = { ...agentes[idx], ...data };
+          localStorage.setItem('intelfon_agents', JSON.stringify(agentes));
+          return true;
+        }
+        return false;
+      }
+    }
+    
+    // Para otras actualizaciones, usar el método anterior
     const agentes = await this.getAgentes();
     const idx = agentes.findIndex(a => a.idAgente === id);
     if (idx !== -1) {

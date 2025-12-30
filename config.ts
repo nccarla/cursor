@@ -10,6 +10,9 @@ export const API_CONFIG = {
   // URL del webhook de n8n para la gestión de casos (CRUD)
   WEBHOOK_CASOS_URL: import.meta.env.VITE_WEBHOOK_CASOS_URL || 'https://n8n.red.com.sv/webhook-test/97a6c0f7-ea50-4542-b99e-710b96b58652',
   
+  // URL del webhook de n8n para Round Robin de agentes
+  WEBHOOK_ROUND_ROBIN_URL: import.meta.env.VITE_WEBHOOK_ROUND_ROBIN_URL || 'https://n8n.red.com.sv/webhook-test/case-create-round-robin',
+  
   // Timeout para las peticiones (en milisegundos)
   TIMEOUT: 30000,
   

@@ -110,14 +110,33 @@ const GestionAgentes: React.FC = () => {
   };
 
   const toggleEstado = async (id: string, actual: string) => {
-    const nuevo = actual === 'Activo' ? 'Inactivo' : 'Activo';
-    await api.updateAgente(id, { estado: nuevo as any });
-    loadAgentes();
+    try {
+      // Si está activo, desactivar. Si está inactivo o en vacaciones, activar
+      const activo = actual !== 'Activo';
+      await api.updateAgente(id, { 
+        estado: activo ? 'Activo' : 'Inactivo',
+        activo: activo,
+        vacaciones: false
+      });
+      await loadAgentes();
+    } catch (error: any) {
+      console.error('Error al cambiar estado del agente:', error);
+      alert(error.message || 'Error al cambiar el estado del agente');
+    }
   };
 
   const setVacaciones = async (id: string) => {
-    await api.updateAgente(id, { estado: 'Vacaciones' });
-    loadAgentes();
+    try {
+      await api.updateAgente(id, { 
+        estado: 'Vacaciones',
+        activo: true,
+        vacaciones: true
+      });
+      await loadAgentes();
+    } catch (error: any) {
+      console.error('Error al marcar agente en vacaciones:', error);
+      alert(error.message || 'Error al marcar el agente en vacaciones');
+    }
   };
 
   const handleDeleteClick = (agente: Agente) => {
@@ -257,6 +276,8 @@ const GestionAgentes: React.FC = () => {
 
     if (diffMins < 60) return `hace ${diffMins} min`;
     if (diffHours < 24) return `hace ${diffHours}h`;
+    if (diffDays === 0) return 'hoy';
+    if (diffDays === 1) return 'hace 1 día';
     return `hace ${diffDays} días`;
   };
 
@@ -482,17 +503,10 @@ const GestionAgentes: React.FC = () => {
 
                       {/* Métricas con barra de carga */}
                       {(() => {
-                        const agentesConPrioridad = agentes
-                          .map(a => ({
-                            ...a,
-                            prioridad: a.estado === 'Activo' 
-                              ? a.casosActivos * 1000 + a.ordenRoundRobin
-                              : 999999
-                          }))
-                          .sort((a, b) => a.prioridad - b.prioridad);
-                        
-                        const posicionPrioridad = agentesConPrioridad.findIndex(a => a.idAgente === agente.idAgente) + 1;
-                        const esSiguiente = posicionPrioridad === 1 && agente.estado === 'Activo';
+                        // Usar el orden_round_robin que viene directamente del webhook
+                        // El backend ya calcula este valor, no lo calculamos en el frontend
+                        const ordenRoundRobin = agente.ordenRoundRobin || 999;
+                        const esSiguiente = ordenRoundRobin === 1 && agente.estado === 'Activo';
                         
                         return (
                           <div className="space-y-2 mb-2">
@@ -514,7 +528,7 @@ const GestionAgentes: React.FC = () => {
                               </div>
                             </div>
 
-                            {/* R-Robin con destacado */}
+                            {/* R-Robin con destacado - Usa el orden_round_robin del webhook */}
                             <div className="p-2.5 rounded-xl border-2 transition-all" style={{
                               backgroundColor: esSiguiente ? 'rgba(34, 197, 94, 0.15)' : 'rgba(30, 41, 59, 0.6)',
                               borderColor: esSiguiente ? 'rgba(34, 197, 94, 0.3)' : 'rgba(148, 163, 184, 0.2)'
@@ -527,7 +541,7 @@ const GestionAgentes: React.FC = () => {
                               </div>
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="text-base font-bold" style={{color: esSiguiente ? '#22c55e' : '#ffffff'}}>
-                                  #{posicionPrioridad}
+                                  #{ordenRoundRobin}
                                 </span>
                                 {esSiguiente && (
                                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold border" style={{

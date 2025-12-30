@@ -1,0 +1,263 @@
+import { API_CONFIG } from '../config';
+import { Agente } from '../types';
+
+// URL del webhook de n8n para gestión de Round Robin de agentes
+const WEBHOOK_ROUND_ROBIN_URL = API_CONFIG.WEBHOOK_ROUND_ROBIN_URL || 'https://n8n.red.com.sv/webhook-test/case-create-round-robin';
+
+// Tipos para las acciones del webhook
+type AgentAction = 'agents.read' | 'agent.update';
+
+interface Actor {
+  user_id: string;
+  email: string;
+}
+
+interface AgentWebhookPayload {
+  action: AgentAction;
+  actor?: Actor;
+  data?: {
+    agente_id?: string;
+    activo?: boolean;
+    vacaciones?: boolean;
+  };
+}
+
+interface AgentWebhookResponse {
+  success?: boolean;
+  error?: boolean;
+  message?: string;
+  agents?: any[];
+  [key: string]: any;
+}
+
+/**
+ * Obtiene la información del actor (usuario autenticado)
+ */
+const getActor = (): Actor | null => {
+  try {
+    const userStr = localStorage.getItem('intelfon_user');
+    const userEmail = localStorage.getItem('intelfon_user_email');
+    
+    if (!userStr) {
+      return null;
+    }
+    
+    const user = JSON.parse(userStr);
+    const email = userEmail || `${user.role?.toLowerCase()}@intelfon.com`;
+    
+    return {
+      user_id: user.id || 'unknown',
+      email: email
+    };
+  } catch (error) {
+    console.error('Error obteniendo actor:', error);
+    return null;
+  }
+};
+
+/**
+ * Mapea la respuesta del webhook a un objeto Agente de la UI
+ */
+const mapWebhookResponseToAgent = (webhookData: any): Agente | null => {
+  if (!webhookData) return null;
+  
+  try {
+    // El webhook retorna: { id, nombre, email, activo, vacaciones, casos_activos, orden_round_robin, dias_desde_ultimo_caso }
+    // Necesitamos mapear a: { idAgente, nombre, email, estado, ordenRoundRobin, ultimoCasoAsignado, casosActivos }
+    
+    // Determinar el estado basado en activo y vacaciones
+    let estado: 'Activo' | 'Inactivo' | 'Vacaciones' = 'Inactivo';
+    if (webhookData.vacaciones === true) {
+      estado = 'Vacaciones';
+    } else if (webhookData.activo === true) {
+      estado = 'Activo';
+    }
+    
+    // Calcular la fecha del último caso asignado basado en dias_desde_ultimo_caso
+    let ultimoCasoAsignado = new Date().toISOString();
+    if (webhookData.dias_desde_ultimo_caso !== undefined && webhookData.dias_desde_ultimo_caso !== null) {
+      const dias = typeof webhookData.dias_desde_ultimo_caso === 'number' ? webhookData.dias_desde_ultimo_caso : 0;
+      const fechaUltimoCaso = new Date();
+      fechaUltimoCaso.setDate(fechaUltimoCaso.getDate() - dias);
+      ultimoCasoAsignado = fechaUltimoCaso.toISOString();
+    }
+    
+    return {
+      idAgente: webhookData.id || webhookData.agente_id || webhookData.idAgente || '',
+      nombre: webhookData.nombre || webhookData.name || '',
+      email: webhookData.email || '',
+      estado: estado,
+      ordenRoundRobin: webhookData.orden_round_robin !== undefined ? webhookData.orden_round_robin : (webhookData.ordenRoundRobin || 999),
+      ultimoCasoAsignado: webhookData.ultimo_caso_asignado || webhookData.ultimoCasoAsignado || ultimoCasoAsignado,
+      casosActivos: webhookData.casos_activos !== undefined ? webhookData.casos_activos : (webhookData.casosActivos || 0)
+    };
+  } catch (error) {
+    console.error('Error mapeando respuesta del webhook:', error);
+    return null;
+  }
+};
+
+/**
+ * Mapea un array de agentes del webhook a un array de Agente
+ */
+const mapWebhookResponseToAgents = (webhookData: any): Agente[] => {
+  if (!webhookData) return [];
+  
+  try {
+    // El webhook puede retornar un array directamente o dentro de una propiedad
+    const agents = webhookData.agents || webhookData.agentes || (Array.isArray(webhookData) ? webhookData : []);
+    
+    if (!Array.isArray(agents)) {
+      return [];
+    }
+    
+    return agents
+      .map(mapWebhookResponseToAgent)
+      .filter((a): a is Agente => a !== null);
+  } catch (error) {
+    console.error('Error mapeando array de agentes del webhook:', error);
+    return [];
+  }
+};
+
+/**
+ * Llama al webhook de Round Robin con el payload especificado
+ */
+const callRoundRobinWebhook = async (payload: AgentWebhookPayload): Promise<AgentWebhookResponse> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+  
+  try {
+    console.log('📤 Enviando petición al webhook de Round Robin:', {
+      url: WEBHOOK_ROUND_ROBIN_URL,
+      action: payload.action,
+      payload
+    });
+    
+    const response = await fetch(WEBHOOK_ROUND_ROBIN_URL, {
+      method: 'POST',
+      mode: 'cors',
+      credentials: 'omit',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      if (response.status === 0) {
+        throw new Error('Error de CORS: El servidor no está permitiendo peticiones desde este origen.');
+      }
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+    
+    // Intentar parsear JSON
+    let result: AgentWebhookResponse;
+    try {
+      const text = await response.text();
+      if (text.trim() === '') {
+        result = { success: true };
+      } else {
+        result = JSON.parse(text);
+      }
+    } catch (parseError) {
+      if (response.ok) {
+        console.log('Respuesta no-JSON recibida, considerando como éxito');
+        result = { success: true };
+      } else {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+    }
+    
+    console.log('📥 Respuesta del webhook de Round Robin:', result);
+    
+    // Verificar si hay error en la respuesta
+    if (result && result.error === true) {
+      throw new Error(result.message || 'Error en la operación');
+    }
+    
+    return result;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    
+    if (error.name === 'AbortError') {
+      throw new Error('Timeout: El servidor no respondió a tiempo. Verifica tu conexión.');
+    }
+    
+    if (error.message && (
+      error.message.includes('CORS') || 
+      error.message.includes('cors') ||
+      error.message.includes('fetch') ||
+      error.message.includes('NetworkError')
+    )) {
+      throw new Error('Error de CORS: El servidor n8n necesita permitir peticiones desde este dominio. Contacta al administrador.');
+    }
+    
+    if (error.message) {
+      throw error;
+    }
+    
+    throw new Error('Error de conexión con el servidor.');
+  }
+};
+
+/**
+ * Obtiene todos los agentes con información de Round Robin
+ */
+export const getAgents = async (): Promise<Agente[]> => {
+  const actor = getActor();
+  
+  // El actor es opcional para leer agentes, pero si existe lo incluimos
+  const payload: AgentWebhookPayload = {
+    action: 'agents.read',
+    ...(actor && { actor })
+  };
+  
+  const response = await callRoundRobinWebhook(payload);
+  
+  // Mapear la respuesta a un array de Agente
+  if (response.agents || response.agentes || Array.isArray(response)) {
+    return mapWebhookResponseToAgents(response);
+  }
+  
+  // Si no hay agentes, retornar array vacío
+  return [];
+};
+
+/**
+ * Actualiza el estado de un agente (activo/inactivo/vacaciones)
+ */
+export const updateAgentStatus = async (
+  agenteId: string,
+  activo: boolean,
+  vacaciones: boolean = false
+): Promise<boolean> => {
+  const actor = getActor();
+  
+  if (!actor) {
+    throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+  }
+  
+  if (!agenteId) {
+    throw new Error('ID de agente requerido.');
+  }
+  
+  const payload: AgentWebhookPayload = {
+    action: 'agent.update',
+    actor,
+    data: {
+      agente_id: agenteId,
+      activo: activo,
+      vacaciones: vacaciones
+    }
+  };
+  
+  const response = await callRoundRobinWebhook(payload);
+  
+  return response.success !== false && !response.error;
+};
+
