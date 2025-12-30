@@ -247,7 +247,7 @@ const GerenteDashboard: React.FC = () => {
       {/* Header con filtro de período y última actualización */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div></div>
-          <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 rounded-xl border p-1" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
             {(['hoy', 'semana', 'mes'] as PeriodFilter[]).map((period) => (
               <button

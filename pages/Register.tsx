@@ -31,18 +31,17 @@ const Register: React.FC = () => {
     }
 
     try {
-      // Crear cuenta y almacenarla en n8n (skipLogin=true porque es desde supervisor)
-      const result = await api.createAccount(email, password, name, undefined, true);
+      // Crear cuenta y almacenarla en n8n
+      const user = await api.createAccount(email, password, name);
       
-      // Si llegamos aquí, el agente fue creado exitosamente
+      // Si llegamos aquí, el usuario fue creado y almacenado exitosamente en n8n
       // Mostrar mensaje de éxito antes de redirigir
       setError('');
       
-      // Después de crear el agente, volver a gestión de agentes
-      // El evento 'agente-creado' ya fue disparado en api.ts, así que la lista se recargará automáticamente
+      // Después de crear la cuenta, volver a gestión de agentes
       setTimeout(() => {
         navigate('/app/agentes');
-      }, 300);
+      }, 500);
     } catch (err: any) {
       // Mejorar mensajes de error para indicar problemas con n8n
       const errorMessage = err.message || 'Error al crear la cuenta. Intenta de nuevo.';
@@ -69,7 +68,7 @@ const Register: React.FC = () => {
             <ArrowLeft className="w-5 h-5 text-slate-600" />
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 12px 30px rgba(200, 21, 27, 0.25)'}}>
+            <div className="w-12 h-12 rounded-xl bg-gradient-brand-blue flex items-center justify-center shadow-brand-blue-lg">
               <UserPlus className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -172,8 +171,3 @@ const Register: React.FC = () => {
 };
 
 export default Register;
-
-
-
-
-

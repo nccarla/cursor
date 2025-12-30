@@ -154,13 +154,13 @@
 *::-webkit-scrollbar {
   width: 12px;
   height: 12px;
-}
+  }
 
 *::-webkit-scrollbar-track {
   background: rgba(30, 41, 59, 0.2);
   border-radius: 6px;
   margin: 4px;
-}
+  }
 
 *::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.3);

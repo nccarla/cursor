@@ -5,7 +5,7 @@ import { api } from '../services/api';
 import { Case, CaseStatus, Cliente, Categoria, Channel } from '../types';
 import { STATE_COLORS } from '../constants';
 import { 
-  Search, Plus, Filter, ChevronRight, ChevronDown, X, Eye, UserCheck, ArrowUpRight, 
+  Search, Plus, Filter, ChevronRight, ChevronDown, X, 
   Clock, AlertTriangle, RefreshCw, ArrowUp, ArrowDown, CheckCircle2
 } from 'lucide-react';
 
@@ -101,14 +101,14 @@ const BandejaCasos: React.FC = () => {
   const loadCasos = async () => {
     setLoading(true);
     try {
-      const data = await api.getCases();
-      setCasos([...data]);
-      setLastUpdate(new Date());
+    const data = await api.getCases();
+    setCasos([...data]);
+    setLastUpdate(new Date());
     } catch (err: any) {
       console.error('Error al cargar casos:', err);
       // El error ya se maneja en api.getCases() con fallback a localStorage
     } finally {
-      setLoading(false);
+    setLoading(false);
     }
   };
 
@@ -683,8 +683,8 @@ const BandejaCasos: React.FC = () => {
                           backgroundColor: isHovered ? 'rgba(30, 41, 59, 0.6)' : 'transparent',
                           borderLeft: priority === 'critical' 
                             ? '4px solid var(--color-brand-red)' 
-                            : priority === 'warning'
-                            ? '4px solid #f59e0b'
+                            : priority === 'warning' 
+                            ? '4px solid #f59e0b' 
                             : '4px solid transparent'
                         }}
                         onMouseEnter={() => setHoveredRowId(caso.id)}
@@ -719,20 +719,20 @@ const BandejaCasos: React.FC = () => {
                       </td>
                       <td className="px-6 py-5">
                         <div className="relative group/estado">
-                          <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col gap-1.5">
                             <span className={`inline-flex items-center text-xs font-bold px-3.5 py-2 rounded-md border w-fit ${STATE_COLORS[status as CaseStatus]}`}>
-                              {status}
-                            </span>
+                            {status}
+                          </span>
                             <div className="flex items-center gap-1.5 text-xs" style={{color: '#94a3b8'}}>
                               {caso.slaExpired && (
-                                <>
+                              <>
                                   <Clock className="w-3 h-3 flex-shrink-0" style={{color: '#f87171'}} />
                                   <span className="font-medium" style={{color: '#f87171'}}>
                                     SLA vencido
-                                  </span>
+                                </span>
                                   {diasAbierto > 0 && <span>·</span>}
-                                </>
-                              )}
+                              </>
+                            )}
                               {!caso.slaExpired && diasAbierto > 0 && diasAbierto >= slaDias * 0.8 && (
                                 <>
                                   <Clock className="w-3 h-3 flex-shrink-0" style={{color: '#fbbf24'}} />
@@ -758,17 +758,17 @@ const BandejaCasos: React.FC = () => {
                       <td className="px-6 py-5">
                         {caso.agentName ? (
                           <div className="relative group/agent">
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center font-bold text-xs">
-                                  {caso.agentName.charAt(0)}
-                                </div>
-                                <span className="text-sm font-semibold" style={{color: '#ffffff'}}>{caso.agentName}</span>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                                {caso.agentName.charAt(0)}
                               </div>
-                              {caso.agenteAsignado?.casosActivos !== undefined && (
+                                <span className="text-sm font-semibold" style={{color: '#ffffff'}}>{caso.agentName}</span>
+                            </div>
+                            {caso.agenteAsignado?.casosActivos !== undefined && (
                                 <span className="text-xs ml-10 font-medium" style={{color: '#94a3b8'}}>
-                                  {caso.agenteAsignado.casosActivos} activo{caso.agenteAsignado.casosActivos !== 1 ? 's' : ''}
-                                </span>
+                                {caso.agenteAsignado.casosActivos} activo{caso.agenteAsignado.casosActivos !== 1 ? 's' : ''}
+                              </span>
                               )}
                             </div>
                             {caso.agenteAsignado?.casosActivos !== undefined && (
@@ -803,81 +803,14 @@ const BandejaCasos: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="flex items-center justify-end gap-1">
-                          {/* Acciones rápidas solo visibles en hover */}
-                          {isHovered && (
-                            <div className="flex items-center gap-1 rounded-lg p-1 border" style={{
-                              backgroundColor: 'rgba(30, 41, 59, 0.6)',
-                              borderColor: 'rgba(148, 163, 184, 0.2)'
-                            }}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/app/casos/${caso.id}`);
-                                }}
-                                className="p-2 rounded-md transition-all"
-                                style={{color: '#94a3b8'}}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.color = '#cbd5e1';
-                                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.color = '#94a3b8';
-                                  e.currentTarget.style.backgroundColor = 'transparent';
-                                }}
-                                title="Ver detalle"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Reasignar lógica aquí
-                                }}
-                                className="p-2 rounded-md transition-all"
-                                style={{color: '#94a3b8'}}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.color = '#cbd5e1';
-                                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.color = '#94a3b8';
-                                  e.currentTarget.style.backgroundColor = 'transparent';
-                                }}
-                                title="Reasignar agente"
-                              >
-                                <UserCheck className="w-4 h-4" />
-                              </button>
-                              {status !== CaseStatus.ESCALADO && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    // Escalar lógica aquí
-                                  }}
-                                  className="p-2 rounded-md transition-all"
-                                  title="Escalar caso"
-                                  style={{
-                                    color: '#f87171'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'rgba(200, 21, 27, 0.2)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                  }}
-                                >
-                                  <ArrowUpRight className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          )}
+                        <div className="flex items-center justify-end">
                           <div className="p-2 rounded-lg transition-all" style={{
                             backgroundColor: isHovered ? 'rgba(148, 163, 184, 0.2)' : 'transparent'
                           }}>
-                            <ChevronRight className="w-5 h-5 transition-all" style={{
+                              <ChevronRight className="w-5 h-5 transition-all" style={{
                               color: isHovered ? '#94a3b8' : '#64748b',
-                              transform: isHovered ? 'translateX(4px)' : ''
-                            }} />
+                                transform: isHovered ? 'translateX(4px)' : ''
+                              }} />
                           </div>
                         </div>
                       </td>

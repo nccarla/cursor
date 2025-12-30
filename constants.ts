@@ -17,10 +17,16 @@ export const ROLE_HOMEPAGE: Record<Role, string> = {
 };
 
 export const STATE_COLORS: Record<string, string> = {
-  [CaseStatus.NUEVO]: 'bg-slate-900 text-white border-slate-700',
-  [CaseStatus.EN_PROCESO]: 'bg-amber-100 text-amber-700 border-amber-200',
-  [CaseStatus.PENDIENTE_CLIENTE]: 'bg-purple-100 text-purple-700 border-purple-200',
-  [CaseStatus.ESCALADO]: 'bg-red-100 text-red-700 border-red-200',
-  [CaseStatus.RESUELTO]: 'bg-green-100 text-green-700 border-green-200',
-  [CaseStatus.CERRADO]: 'bg-slate-100 text-slate-700 border-slate-200'
+  // Nuevo: Azul
+  [CaseStatus.NUEVO]: 'bg-blue-500 text-white border-blue-600',
+  // En Proceso: Amarillo
+  [CaseStatus.EN_PROCESO]: 'bg-yellow-500 text-white border-yellow-600',
+  // Pendiente Cliente: Naranja
+  [CaseStatus.PENDIENTE_CLIENTE]: 'bg-orange-500 text-white border-orange-600',
+  // Escalado: Rojo
+  [CaseStatus.ESCALADO]: 'bg-red-500 text-white border-red-600',
+  // Resuelto: Verde
+  [CaseStatus.RESUELTO]: 'bg-green-500 text-white border-green-600',
+  // Cerrado: Gris
+  [CaseStatus.CERRADO]: 'bg-gray-500 text-white border-gray-600'
 };

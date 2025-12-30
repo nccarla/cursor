@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Case, CaseStatus } from '../types';
 import { STATE_TRANSITIONS, STATE_COLORS } from '../constants';
+import { calculateSLAData as calculateSLADataUtil, SLAData } from '../utils/slaUtils';
 import { 
   ArrowLeft, MessageSquare, User, Building2, Phone, Mail, CheckCircle2, 
   AlertTriangle, Clock, X, Lock, Send, Paperclip, History, TrendingUp,
@@ -110,25 +111,12 @@ const CaseDetail: React.FC = () => {
     setNewComment('');
   };
 
-  const calculateSLAData = () => {
+  const calculateSLAData = (): SLAData | null => {
     if (!caso || !caso.categoria) return null;
     
-    const createdAt = new Date(caso.createdAt);
-    const now = new Date();
-    const slaHours = caso.categoria.slaDias * 24;
-    const elapsedHours = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-    const progressPercent = Math.min(100, (elapsedHours / slaHours) * 100);
-    const isOverdue = elapsedHours > slaHours;
-    const overdueHours = isOverdue ? Math.floor(elapsedHours - slaHours) : 0;
-
-    return {
-      slaHours,
-      elapsedHours: Math.floor(elapsedHours),
-      progressPercent: Math.min(100, progressPercent),
-      isOverdue,
-      overdueHours,
-      remainingHours: Math.max(0, Math.floor(slaHours - elapsedHours))
-    };
+    // Usar días hábiles del SLA desde la categoría
+    const slaBusinessDays = caso.categoria.slaDias;
+    return calculateSLADataUtil(caso.createdAt, slaBusinessDays);
   };
 
   const generateTimelineEvents = (): TimelineEvent[] => {
@@ -189,7 +177,7 @@ const CaseDetail: React.FC = () => {
   const validTransitions = STATE_TRANSITIONS[caso.status as CaseStatus] || [];
   const slaData = calculateSLAData();
   const timelineEvents = generateTimelineEvents();
-  const isCritical = caso.status === CaseStatus.ESCALADO || caso.slaExpired;
+  const isCritical = caso.status === CaseStatus.ESCALADO || (slaData?.isExpired || false);
   const isEscalado = caso.status === CaseStatus.ESCALADO;
   
   const formatDate = (dateString: string) => {
@@ -203,9 +191,7 @@ const CaseDetail: React.FC = () => {
     });
   };
 
-  const formatTimeAgo = (hours: number) => {
-    if (hours < 24) return `${hours} hora${hours !== 1 ? 's' : ''}`;
-    const days = Math.floor(hours / 24);
+  const formatTimeAgo = (days: number) => {
     return `${days} día${days !== 1 ? 's' : ''}`;
   };
 
@@ -267,9 +253,9 @@ const CaseDetail: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5" style={{color: '#f87171'}} />
                   <p className="text-sm font-semibold" style={{color: '#f87171'}}>
-                    {isEscalado && caso.slaExpired && 'Caso escalado y SLA vencido'}
-                    {isEscalado && !caso.slaExpired && 'Caso escalado - Requiere atención inmediata'}
-                    {!isEscalado && caso.slaExpired && slaData && `SLA vencido hace ${formatTimeAgo(slaData.overdueHours)}`}
+                    {isEscalado && slaData?.isExpired && 'Caso escalado y SLA vencido'}
+                    {isEscalado && !slaData?.isExpired && 'Caso escalado - Requiere atención inmediata'}
+                    {!isEscalado && slaData?.isExpired && slaData && `SLA vencido hace ${slaData.delayDays} día${slaData.delayDays !== 1 ? 's' : ''} hábil${slaData.delayDays !== 1 ? 'es' : ''}`}
                   </p>
                 </div>
               </div>
@@ -298,17 +284,17 @@ const CaseDetail: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="p-4 rounded-xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
                     <p className="text-xs font-medium mb-1" style={{color: '#94a3b8'}}>SLA Comprometido</p>
-                    <p className="text-lg font-bold" style={{color: '#ffffff'}}>{slaData.slaHours}h ({caso.categoria?.slaDias || 0} días)</p>
+                    <p className="text-lg font-bold" style={{color: '#ffffff'}}>{slaData.slaDays} día{slaData.slaDays !== 1 ? 's' : ''} hábil{slaData.slaDays !== 1 ? 'es' : ''}</p>
                   </div>
-                  <div className={`p-4 rounded-xl border ${slaData.isOverdue ? '' : ''}`} style={{
-                    backgroundColor: slaData.isOverdue ? 'rgba(220, 38, 38, 0.15)' : 'rgba(30, 41, 59, 0.6)',
-                    borderColor: slaData.isOverdue ? 'rgba(220, 38, 38, 0.3)' : 'rgba(148, 163, 184, 0.2)'
+                  <div className={`p-4 rounded-xl border ${slaData.isExpired ? '' : ''}`} style={{
+                    backgroundColor: slaData.isExpired ? 'rgba(220, 38, 38, 0.15)' : 'rgba(30, 41, 59, 0.6)',
+                    borderColor: slaData.isExpired ? 'rgba(220, 38, 38, 0.3)' : 'rgba(148, 163, 184, 0.2)'
                   }}>
-                    <p className="text-xs font-medium mb-1" style={{color: slaData.isOverdue ? '#f87171' : '#94a3b8'}}>
-                      Tiempo Transcurrido
+                    <p className="text-xs font-medium mb-1" style={{color: slaData.isExpired ? '#f87171' : '#94a3b8'}}>
+                      {slaData.isExpired ? 'Días de Retraso' : 'Días Transcurridos'}
                     </p>
-                    <p className="text-lg font-bold" style={{color: slaData.isOverdue ? '#f87171' : '#ffffff'}}>
-                      {slaData.elapsedHours}h ({Math.floor(slaData.elapsedHours / 24)} días)
+                    <p className="text-lg font-bold" style={{color: slaData.isExpired ? '#f87171' : '#ffffff'}}>
+                      {slaData.isExpired ? slaData.delayDays : slaData.businessDaysElapsed} día{(slaData.isExpired ? slaData.delayDays : slaData.businessDaysElapsed) !== 1 ? 's' : ''} hábil{(slaData.isExpired ? slaData.delayDays : slaData.businessDaysElapsed) !== 1 ? 'es' : ''}
                     </p>
                   </div>
                 </div>
@@ -316,17 +302,20 @@ const CaseDetail: React.FC = () => {
                 {/* Barra de progreso SLA */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-xs font-medium">
-                    <span style={{color: slaData.isOverdue ? '#f87171' : '#94a3b8'}}>
-                      {slaData.isOverdue ? `Excedido: +${formatTimeAgo(slaData.overdueHours)}` : `Restante: ${formatTimeAgo(slaData.remainingHours)}`}
+                    <span style={{color: slaData.isExpired ? '#f87171' : '#94a3b8'}}>
+                      {slaData.isExpired 
+                        ? `Excedido: ${slaData.delayDays} día${slaData.delayDays !== 1 ? 's' : ''} hábil${slaData.delayDays !== 1 ? 'es' : ''}` 
+                        : `Restante: ${slaData.remainingDays} día${slaData.remainingDays !== 1 ? 's' : ''} hábil${slaData.remainingDays !== 1 ? 'es' : ''}`
+                      }
                     </span>
-                    <span style={{color: slaData.isOverdue ? '#f87171' : '#94a3b8', fontWeight: slaData.isOverdue ? 'bold' : 'normal'}}>
+                    <span style={{color: slaData.isExpired ? '#f87171' : '#94a3b8', fontWeight: slaData.isExpired ? 'bold' : 'normal'}}>
                       {slaData.progressPercent.toFixed(0)}%
                     </span>
                   </div>
                   <div className="w-full rounded-full h-3 overflow-hidden" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}>
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
-                        slaData.isOverdue 
+                        slaData.isExpired 
                           ? 'bg-gradient-to-r from-red-500 to-red-600' 
                           : slaData.progressPercent > 80
                           ? 'bg-gradient-to-r from-amber-500 to-amber-600'
@@ -334,6 +323,12 @@ const CaseDetail: React.FC = () => {
                       }`}
                       style={{ width: `${Math.min(100, slaData.progressPercent)}%` }}
                     />
+                  </div>
+                  <div className="text-xs" style={{color: '#64748b'}}>
+                    Fecha límite: {slaData.deadline.toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                  </div>
+                  <div className="text-xs" style={{color: '#64748b'}}>
+                    Fecha límite: {slaData.deadline.toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
                   </div>
                 </div>
               </div>

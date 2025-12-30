@@ -374,39 +374,41 @@ export const api = {
 
   async getCases(): Promise<Case[]> {
     try {
-      // Intentar obtener casos del webhook
+      // Intentar obtener casos del webhook primero
       const cases = await caseService.getCases();
       
-      // Si es agente, solo ve sus casos
-      const user = this.getUser();
-      if (user?.role === 'AGENTE') {
-        return cases.filter((c: any) => 
-          (c.agenteAsignado?.idAgente === user.id) || 
-          (c.agentId === user.id) ||
-          (c.agentName === user.name)
-        );
+      // Si el webhook retorna casos, usarlos
+      if (cases && cases.length > 0) {
+        // Si es agente, solo ve sus casos
+        const user = this.getUser();
+        if (user?.role === 'AGENTE') {
+          return cases.filter((c: any) => 
+            (c.agenteAsignado?.idAgente === user.id) || 
+            (c.agentId === user.id) ||
+            (c.agentName === user.name)
+          );
+        }
+        return cases;
       }
-      
-      return cases;
     } catch (error: any) {
       console.warn('⚠️ Error al obtener casos del webhook, usando fallback a localStorage:', error.message);
-      
-      // Fallback a localStorage
-      initStorage();
-      const data = localStorage.getItem('intelfon_cases');
-      const cases = data ? JSON.parse(data) : [];
-      
-      // Si es agente, solo ve sus casos
-      const user = this.getUser();
-      if (user?.role === 'AGENTE') {
-        return cases.filter((c: any) => 
-          (c.agenteAsignado?.idAgente === '1') || 
-          (c.agentId === '1') ||
-          (c.agentName === user.name)
-        );
-      }
-      return cases;
     }
+    
+    // Fallback a localStorage/mockdata
+    initStorage();
+    const data = localStorage.getItem('intelfon_cases');
+    const cases = data ? JSON.parse(data) : [];
+    
+    // Si es agente, solo ve sus casos
+    const user = this.getUser();
+    if (user?.role === 'AGENTE') {
+      return cases.filter((c: any) => 
+        (c.agenteAsignado?.idAgente === user.id) || 
+        (c.agentId === user.id) ||
+        (c.agentName === user.name)
+      );
+    }
+    return cases;
   },
 
   async getCasoById(id: string): Promise<Case | undefined> {

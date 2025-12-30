@@ -1,5 +1,6 @@
 import { API_CONFIG } from '../config';
 import { Case, CaseStatus, Channel } from '../types';
+import { calculateBusinessDaysElapsed, calculateSLADelayDays } from '../utils/slaUtils';
 
 // URL del webhook de n8n para gestión de casos
 const WEBHOOK_CASOS_URL = API_CONFIG.WEBHOOK_CASOS_URL || 'https://n8n.red.com.sv/webhook-test/97a6c0f7-ea50-4542-b99e-710b96b58652';
@@ -157,14 +158,34 @@ const mapWebhookResponseToCase = (webhookData: any): Case | null => {
       agentId: caseData.agente_id || caseData.agentId || '',
       agentName: caseData.agente_nombre || caseData.agentName || '',
       createdAt: caseData.fecha_creacion || caseData.createdAt || new Date().toISOString(),
-      slaExpired: caseData.sla_vencido || caseData.slaExpired || false,
       history: caseData.historial || caseData.history || [],
       clientEmail: caseData.cliente?.email || caseData.clientEmail || '',
       clientPhone: caseData.cliente?.telefono || caseData.clientPhone || '',
-      diasAbierto: caseData.dias_abierto || caseData.diasAbierto || 0,
       agenteAsignado: caseData.agenteAsignado || null as any,
       categoria: caseData.categoria || null as any,
-      cliente: caseData.cliente || null as any
+      cliente: caseData.cliente || null as any,
+      // Calcular diasAbierto y slaExpired usando días hábiles
+      ...(() => {
+        try {
+          const createdAt = new Date(caseData.fecha_creacion || caseData.createdAt || new Date().toISOString());
+          const categoria = caseData.categoria || null;
+          const slaDays = categoria?.slaDias || categoria?.sla_dias || 5; // Default 5 si no hay categoría
+          const diasAbierto = calculateBusinessDaysElapsed(createdAt);
+          const delayDays = calculateSLADelayDays(createdAt, slaDays);
+          const slaExpired = delayDays > 0;
+          
+          return {
+            diasAbierto,
+            slaExpired
+          };
+        } catch (error) {
+          console.warn('Error calculando días hábiles, usando valores por defecto:', error);
+          return {
+            diasAbierto: caseData.dias_abierto || caseData.diasAbierto || 0,
+            slaExpired: caseData.sla_vencido || caseData.slaExpired || false
+          };
+        }
+      })()
     };
   } catch (error) {
     console.error('Error mapeando respuesta del webhook:', error);
@@ -176,20 +197,52 @@ const mapWebhookResponseToCase = (webhookData: any): Case | null => {
  * Mapea un array de casos del webhook a un array de Case
  */
 const mapWebhookResponseToCases = (webhookData: any): Case[] => {
-  if (!webhookData) return [];
+  if (!webhookData) {
+    console.warn('⚠️ mapWebhookResponseToCases: webhookData es null o undefined');
+    return [];
+  }
   
   try {
-    const cases = webhookData.cases || webhookData.casos || (Array.isArray(webhookData) ? webhookData : []);
+    // Intentar extraer el array de casos
+    let cases: any[] = [];
     
-    if (!Array.isArray(cases)) {
+    if (Array.isArray(webhookData)) {
+      // Si es un array directo
+      cases = webhookData;
+    } else if (webhookData.cases && Array.isArray(webhookData.cases)) {
+      // Si tiene propiedad "cases"
+      cases = webhookData.cases;
+    } else if (webhookData.casos && Array.isArray(webhookData.casos)) {
+      // Si tiene propiedad "casos"
+      cases = webhookData.casos;
+    } else if (webhookData.data && Array.isArray(webhookData.data)) {
+      // Si tiene propiedad "data" que es un array
+      cases = webhookData.data;
+    } else {
+      console.warn('⚠️ No se pudo extraer array de casos de:', webhookData);
+      console.warn('⚠️ Claves disponibles:', Object.keys(webhookData));
       return [];
     }
     
-    return cases
-      .map(mapWebhookResponseToCase)
+    console.log(`📋 Mapeando ${cases.length} casos del webhook...`);
+    
+    const mappedCases = cases
+      .map((caseData, index) => {
+        console.log(`  📝 Mapeando caso ${index + 1}/${cases.length}:`, caseData);
+        const mapped = mapWebhookResponseToCase(caseData);
+        if (!mapped) {
+          console.warn(`  ⚠️ No se pudo mapear el caso ${index + 1}`);
+        }
+        return mapped;
+      })
       .filter((c): c is Case => c !== null);
+    
+    console.log(`✅ ${mappedCases.length} casos mapeados exitosamente de ${cases.length} casos recibidos`);
+    
+    return mappedCases;
   } catch (error) {
-    console.error('Error mapeando array de casos del webhook:', error);
+    console.error('❌ Error mapeando array de casos del webhook:', error);
+    console.error('❌ Datos recibidos:', webhookData);
     return [];
   }
 };
@@ -363,18 +416,53 @@ export const getCases = async (): Promise<Case[]> => {
   
   const response = await callCaseWebhook(payload);
   
-  // Mapear la respuesta a un array de Case
-  if (response.cases || response.casos || Array.isArray(response)) {
+  console.log('📥 Respuesta completa del webhook getCases:', JSON.stringify(response, null, 2));
+  
+  // Intentar diferentes formatos de respuesta
+  // Formato 1: Array directo
+  if (Array.isArray(response)) {
+    console.log('✅ Respuesta es un array directo, mapeando casos...');
     return mapWebhookResponseToCases(response);
   }
   
-  // Si el webhook retorna un solo caso, convertirlo a array
+  // Formato 2: { cases: [...] } o { casos: [...] }
+  if (response.cases && Array.isArray(response.cases)) {
+    console.log('✅ Respuesta tiene propiedad "cases", mapeando casos...');
+    return mapWebhookResponseToCases(response);
+  }
+  
+  if (response.casos && Array.isArray(response.casos)) {
+    console.log('✅ Respuesta tiene propiedad "casos", mapeando casos...');
+    return mapWebhookResponseToCases(response);
+  }
+  
+  // Formato 3: { data: [...] } o { data: { cases: [...] } }
+  if (response.data) {
+    if (Array.isArray(response.data)) {
+      console.log('✅ Respuesta tiene propiedad "data" como array, mapeando casos...');
+      return mapWebhookResponseToCases(response.data);
+    }
+    if (response.data.cases && Array.isArray(response.data.cases)) {
+      console.log('✅ Respuesta tiene "data.cases", mapeando casos...');
+      return mapWebhookResponseToCases(response.data);
+    }
+    if (response.data.casos && Array.isArray(response.data.casos)) {
+      console.log('✅ Respuesta tiene "data.casos", mapeando casos...');
+      return mapWebhookResponseToCases(response.data);
+    }
+  }
+  
+  // Formato 4: Un solo caso { case: {...} }
   if (response.case) {
+    console.log('✅ Respuesta tiene un solo caso, convirtiendo a array...');
     const mappedCase = mapWebhookResponseToCase(response.case);
     return mappedCase ? [mappedCase] : [];
   }
   
-  // Si no hay casos, retornar array vacío
+  // Si no se reconoce el formato, loguear y retornar vacío
+  console.warn('⚠️ No se pudo identificar el formato de la respuesta del webhook:', response);
+  console.warn('⚠️ Estructura recibida:', Object.keys(response || {}));
+  
   return [];
 };
 
