@@ -5,11 +5,12 @@ import { Agente } from '../types';
 const WEBHOOK_ROUND_ROBIN_URL = API_CONFIG.WEBHOOK_ROUND_ROBIN_URL || 'https://n8n.red.com.sv/webhook-test/case-create-round-robin';
 
 // Tipos para las acciones del webhook
-type AgentAction = 'agents.read' | 'agent.update';
+type AgentAction = 'agents.read' | 'agent.update' | 'agent.create';
 
 interface Actor {
   user_id: string;
   email: string;
+  role?: string;
 }
 
 interface AgentWebhookPayload {
@@ -19,6 +20,11 @@ interface AgentWebhookPayload {
     agente_id?: string;
     activo?: boolean;
     vacaciones?: boolean;
+    nombre?: string;
+    email?: string;
+    pais?: string;
+    rol?: string;
+    estado?: string;
   };
 }
 
@@ -47,7 +53,8 @@ const getActor = (): Actor | null => {
     
     return {
       user_id: user.id || 'unknown',
-      email: email
+      email: email,
+      role: user.role || undefined
     };
   } catch (error) {
     console.error('Error obteniendo actor:', error);
@@ -57,6 +64,11 @@ const getActor = (): Actor | null => {
 
 /**
  * Mapea la respuesta del webhook a un objeto Agente de la UI
+ * 
+ * Nota sobre orden_round_robin: El backend calcula el orden del Round Robin según la siguiente lógica:
+ * 1. El primero en ser elegido (#1) es el agente que tiene MENOS casos activos
+ * 2. En caso de empate en número de casos activos, se elige el que tenga el caso MÁS ANTIGUO
+ *    (menor fecha de último caso asignado)
  */
 const mapWebhookResponseToAgent = (webhookData: any): Agente | null => {
   if (!webhookData) return null;
@@ -255,6 +267,61 @@ export const updateAgentStatus = async (
       vacaciones: vacaciones
     }
   };
+  
+  const response = await callRoundRobinWebhook(payload);
+  
+  return response.success !== false && !response.error;
+};
+
+/**
+ * Crea un nuevo agente en el sistema
+ */
+export const createAgent = async (
+  nombre: string,
+  email: string,
+  pais: string
+): Promise<boolean> => {
+  const actor = getActor();
+  
+  if (!actor) {
+    throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+  }
+  
+  if (!nombre || !nombre.trim()) {
+    throw new Error('El nombre es requerido.');
+  }
+  
+  if (!email || !email.trim()) {
+    throw new Error('El correo electrónico es requerido.');
+  }
+  
+  // Validar formato de email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email.trim())) {
+    throw new Error('Formato de correo electrónico inválido.');
+  }
+  
+  if (!pais || !pais.trim()) {
+    throw new Error('El país es requerido.');
+  }
+  
+  const payload: AgentWebhookPayload = {
+    action: 'agent.create',
+    actor: {
+      user_id: actor.user_id,
+      email: actor.email,
+      role: actor.role || 'GERENTE'
+    },
+    data: {
+      nombre: nombre.trim(),
+      email: email.trim().toLowerCase(),
+      pais: pais.trim(),
+      rol: 'AGENTE',
+      estado: 'ACTIVO'
+    }
+  };
+  
+  console.log('📤 Creando agente con payload:', payload);
   
   const response = await callRoundRobinWebhook(payload);
   

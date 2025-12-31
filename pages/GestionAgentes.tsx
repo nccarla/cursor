@@ -102,10 +102,65 @@ const GestionAgentes: React.FC = () => {
     };
   }, [agentes.length, itemsPerView]);
 
+  /**
+   * Calcula el orden Round Robin según la lógica y actualiza solo el número de orden:
+   * 1. Primero: agente con MENOS casos activos
+   * 2. En caso de empate: agente con caso MÁS ANTIGUO (menor fecha de último caso)
+   * 3. Los agentes inactivos o en vacaciones van al final (no participan en Round Robin)
+   * Nota: No reordena el array, solo actualiza el campo ordenRoundRobin
+   */
+  const updateRoundRobinOrder = (agentes: Agente[]): Agente[] => {
+    // Separar agentes activos de los inactivos/en vacaciones
+    const agentesActivos = agentes.filter(a => a.estado === 'Activo');
+    const agentesInactivos = agentes.filter(a => a.estado !== 'Activo');
+    
+    // Ordenar solo los agentes activos según la lógica Round Robin para obtener el orden correcto
+    const agentesActivosOrdenados = [...agentesActivos].sort((a, b) => {
+      // Primero comparar por número de casos activos (menor primero)
+      if (a.casosActivos !== b.casosActivos) {
+        return a.casosActivos - b.casosActivos;
+      }
+      
+      // Si hay empate, comparar por fecha del último caso (más antiguo primero)
+      const fechaA = new Date(a.ultimoCasoAsignado).getTime();
+      const fechaB = new Date(b.ultimoCasoAsignado).getTime();
+      return fechaA - fechaB;
+    });
+    
+    // Crear un mapa de ID -> orden Round Robin para los activos
+    const ordenMap = new Map<string, number>();
+    agentesActivosOrdenados.forEach((agente, index) => {
+      ordenMap.set(agente.idAgente, index + 1);
+    });
+    
+    // Calcular el orden de inicio para los inactivos (después de todos los activos)
+    const ordenInicioInactivos = agentesActivos.length + 1;
+    
+    // Actualizar solo el campo ordenRoundRobin sin cambiar el orden del array original
+    return agentes.map((agente, index) => {
+      if (agente.estado === 'Activo') {
+        // Para activos, usar el orden del mapa
+        return {
+          ...agente,
+          ordenRoundRobin: ordenMap.get(agente.idAgente) || (ordenInicioInactivos + index)
+        };
+      } else {
+        // Para inactivos/en vacaciones, asignar orden secuencial después de los activos
+        const indiceInactivo = agentesInactivos.findIndex(a => a.idAgente === agente.idAgente);
+        return {
+          ...agente,
+          ordenRoundRobin: ordenInicioInactivos + indiceInactivo
+        };
+      }
+    });
+  };
+
   const loadAgentes = async () => {
     setLoading(true);
     const data = await api.getAgentes();
-    setAgentes([...data]);
+    // Actualizar solo el número de orden Round Robin sin cambiar las posiciones
+    const agentesConOrden = updateRoundRobinOrder(data);
+    setAgentes(agentesConOrden);
     setLoading(false);
   };
 
@@ -503,8 +558,11 @@ const GestionAgentes: React.FC = () => {
 
                       {/* Métricas con barra de carga */}
                       {(() => {
-                        // Usar el orden_round_robin que viene directamente del webhook
-                        // El backend ya calcula este valor, no lo calculamos en el frontend
+                        // Lógica del Round Robin (calculada en el backend):
+                        // 1. El primero en ser elegido (#1) es el agente que tiene MENOS casos activos
+                        // 2. En caso de empate en número de casos activos, se elige el que tenga el caso MÁS ANTIGUO
+                        //    (menor fecha de último caso asignado)
+                        // El orden_round_robin viene directamente del webhook - el backend calcula este valor
                         const ordenRoundRobin = agente.ordenRoundRobin || 999;
                         const esSiguiente = ordenRoundRobin === 1 && agente.estado === 'Activo';
                         

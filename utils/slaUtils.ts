@@ -109,6 +109,10 @@ export interface SLAData {
   isExpired: boolean; // Si el SLA ha vencido
   remainingDays: number; // Días hábiles restantes (0 si ha vencido)
   progressPercent: number; // Porcentaje de progreso (0-100)
+  createdAt: Date; // Fecha de creación del caso
+  businessHoursTotal: number; // Horas hábiles totales que debería tomar (slaDays * 8)
+  businessHoursElapsed: number; // Horas hábiles transcurridas (businessDaysElapsed * 8)
+  businessHoursDelay: number; // Horas hábiles de retraso (delayDays * 8)
 }
 
 /**
@@ -126,6 +130,12 @@ export const calculateSLAData = (createdAt: string | Date, slaBusinessDays: numb
   const remainingDays = Math.max(0, slaBusinessDays - businessDaysElapsed);
   const progressPercent = Math.min(100, (businessDaysElapsed / slaBusinessDays) * 100);
   
+  // Calcular horas hábiles (asumiendo 8 horas por día hábil)
+  const HOURS_PER_BUSINESS_DAY = 8;
+  const businessHoursTotal = slaBusinessDays * HOURS_PER_BUSINESS_DAY;
+  const businessHoursElapsed = businessDaysElapsed * HOURS_PER_BUSINESS_DAY;
+  const businessHoursDelay = delayDays * HOURS_PER_BUSINESS_DAY;
+  
   return {
     slaDays: slaBusinessDays,
     deadline,
@@ -133,7 +143,11 @@ export const calculateSLAData = (createdAt: string | Date, slaBusinessDays: numb
     delayDays,
     isExpired,
     remainingDays,
-    progressPercent
+    progressPercent,
+    createdAt: startDate,
+    businessHoursTotal,
+    businessHoursElapsed,
+    businessHoursDelay
   };
 };
 

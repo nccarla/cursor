@@ -281,10 +281,28 @@ const CaseDetail: React.FC = () => {
                   <h3 className="text-sm font-semibold uppercase tracking-wider" style={{color: '#cbd5e1'}}>Información SLA</h3>
                 </div>
                 
+                {/* Fechas */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="p-4 rounded-xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
+                    <p className="text-xs font-medium mb-1" style={{color: '#94a3b8'}}>Fecha de Creación</p>
+                    <p className="text-lg font-bold" style={{color: '#ffffff'}}>
+                      {slaData.createdAt.toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
+                    <p className="text-xs font-medium mb-1" style={{color: '#94a3b8'}}>Fecha Límite SLA</p>
+                    <p className="text-lg font-bold" style={{color: '#ffffff'}}>
+                      {slaData.deadline.toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Días y Horas */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="p-4 rounded-xl border" style={{backgroundColor: 'rgba(30, 41, 59, 0.6)', borderColor: 'rgba(148, 163, 184, 0.2)'}}>
                     <p className="text-xs font-medium mb-1" style={{color: '#94a3b8'}}>SLA Comprometido</p>
                     <p className="text-lg font-bold" style={{color: '#ffffff'}}>{slaData.slaDays} día{slaData.slaDays !== 1 ? 's' : ''} hábil{slaData.slaDays !== 1 ? 'es' : ''}</p>
+                    <p className="text-sm font-medium mt-1" style={{color: '#cbd5e1'}}>{slaData.businessHoursTotal} horas hábiles</p>
                   </div>
                   <div className={`p-4 rounded-xl border ${slaData.isExpired ? '' : ''}`} style={{
                     backgroundColor: slaData.isExpired ? 'rgba(220, 38, 38, 0.15)' : 'rgba(30, 41, 59, 0.6)',
@@ -295,6 +313,9 @@ const CaseDetail: React.FC = () => {
                     </p>
                     <p className="text-lg font-bold" style={{color: slaData.isExpired ? '#f87171' : '#ffffff'}}>
                       {slaData.isExpired ? slaData.delayDays : slaData.businessDaysElapsed} día{(slaData.isExpired ? slaData.delayDays : slaData.businessDaysElapsed) !== 1 ? 's' : ''} hábil{(slaData.isExpired ? slaData.delayDays : slaData.businessDaysElapsed) !== 1 ? 'es' : ''}
+                    </p>
+                    <p className="text-sm font-medium mt-1" style={{color: slaData.isExpired ? '#f87171' : '#cbd5e1'}}>
+                      {slaData.isExpired ? `${slaData.businessHoursDelay} horas hábiles de retraso` : `${slaData.businessHoursElapsed} horas hábiles transcurridas`}
                     </p>
                   </div>
                 </div>
@@ -323,12 +344,6 @@ const CaseDetail: React.FC = () => {
                       }`}
                       style={{ width: `${Math.min(100, slaData.progressPercent)}%` }}
                     />
-                  </div>
-                  <div className="text-xs" style={{color: '#64748b'}}>
-                    Fecha límite: {slaData.deadline.toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-                  </div>
-                  <div className="text-xs" style={{color: '#64748b'}}>
-                    Fecha límite: {slaData.deadline.toLocaleDateString('es-ES', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
                   </div>
                 </div>
               </div>

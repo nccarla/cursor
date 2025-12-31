@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../services/api';
+import { createAgent } from '../services/roundRobinService';
 import { UserPlus, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+
+// Lista de países
+const PAISES = [
+  'El Salvador',
+  'Guatemala',
+  'Otro'
+];
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pais, setPais] = useState('El Salvador');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -17,38 +23,22 @@ const Register: React.FC = () => {
     setLoading(true);
     setError('');
 
-    // Validaciones
-    if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden.');
-      setLoading(false);
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
-      setLoading(false);
-      return;
-    }
-
     try {
-      // Crear cuenta y almacenarla en n8n
-      const user = await api.createAccount(email, password, name);
+      // Crear agente usando el webhook de Round Robin
+      await createAgent(name, email, pais);
       
-      // Si llegamos aquí, el usuario fue creado y almacenado exitosamente en n8n
-      // Mostrar mensaje de éxito antes de redirigir
+      // Si llegamos aquí, el agente fue creado exitosamente
       setError('');
       
-      // Después de crear la cuenta, volver a gestión de agentes
+      // Después de crear el agente, volver a gestión de agentes
       setTimeout(() => {
         navigate('/app/agentes');
       }, 500);
     } catch (err: any) {
-      // Mejorar mensajes de error para indicar problemas con n8n
-      const errorMessage = err.message || 'Error al crear la cuenta. Intenta de nuevo.';
+      // Mejorar mensajes de error
+      const errorMessage = err.message || 'Error al crear el agente. Intenta de nuevo.';
       if (errorMessage.includes('ya existe') || errorMessage.includes('409')) {
-        setError('El usuario ya existe. Este correo electrónico ya está registrado en el sistema.');
-      } else if (errorMessage.includes('no pudo ser almacenado') || errorMessage.includes('almacenado')) {
-        setError('Error al almacenar el usuario. Verifica que el webhook esté configurado correctamente.');
+        setError('El agente ya existe. Este correo electrónico ya está registrado en el sistema.');
       } else {
         setError(errorMessage);
       }
@@ -59,21 +49,30 @@ const Register: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="bg-white rounded-2xl shadow-lg p-8 border border-slate-200/50 animate-in fade-in slide-in-from-top">
+      <div className="rounded-2xl p-8 border animate-in fade-in slide-in-from-top" style={{backgroundColor: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(148, 163, 184, 0.15)'}}>
         <div className="flex items-center gap-4 mb-8">
           <button
             onClick={() => navigate('/app/agentes')}
-            className="p-2 rounded-xl hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-xl transition-colors"
+            style={{color: '#94a3b8'}}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#cbd5e1';
+              e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#94a3b8';
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-brand-blue flex items-center justify-center shadow-brand-blue-lg">
               <UserPlus className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-semibold text-slate-900">Crear Nueva Cuenta</h2>
-              <p className="text-sm text-slate-500 font-normal">Registrar nuevo colaborador en el sistema</p>
+              <h2 className="text-2xl font-semibold" style={{color: '#ffffff'}}>Crear Nueva Cuenta</h2>
+              <p className="text-sm font-normal" style={{color: '#94a3b8'}}>Registrar nuevo colaborador en el sistema</p>
             </div>
           </div>
         </div>
@@ -87,65 +86,105 @@ const Register: React.FC = () => {
           )}
 
             <div className="space-y-2">
-              <label className="block text-sm font-normal text-accent-gray tracking-normal ml-1 mb-2">Nombre Completo</label>
+              <label className="block text-sm font-normal tracking-normal ml-1 mb-2" style={{color: '#cbd5e1'}}>Nombre Completo</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Juan Pérez"
-                className="w-full px-5 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:ring-4 focus:ring-accent-blue/20 focus:border-accent-blue focus:bg-white transition-all font-normal text-base placeholder:text-slate-400"
-                style={{'--tw-ring-color': 'var(--color-accent-blue)'} as React.CSSProperties}
+                className="w-full px-5 py-4 rounded-2xl border focus:outline-none focus:ring-2 transition-all font-normal text-base placeholder:text-slate-500"
+                style={{
+                  backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                  borderColor: 'rgba(148, 163, 184, 0.2)',
+                  color: '#ffffff',
+                  '--tw-ring-color': 'var(--color-accent-blue)',
+                } as React.CSSProperties}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent-blue)';
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.2)';
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                }}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-normal text-accent-gray tracking-normal ml-1 mb-2">Correo Institucional</label>
+              <label className="block text-sm font-normal tracking-normal ml-1 mb-2" style={{color: '#cbd5e1'}}>Correo Institucional</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="usuario@intelfon.com"
-                className="w-full px-5 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:ring-4 focus:ring-accent-blue/20 focus:border-accent-blue focus:bg-white transition-all font-normal text-base placeholder:text-slate-400"
-                style={{'--tw-ring-color': 'var(--color-accent-blue)'} as React.CSSProperties}
+                className="w-full px-5 py-4 rounded-2xl border focus:outline-none focus:ring-2 transition-all font-normal text-base placeholder:text-slate-500"
+                style={{
+                  backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                  borderColor: 'rgba(148, 163, 184, 0.2)',
+                  color: '#ffffff',
+                  '--tw-ring-color': 'var(--color-accent-blue)',
+                } as React.CSSProperties}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent-blue)';
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.2)';
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                }}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-normal text-accent-gray tracking-normal ml-1 mb-2">Contraseña</label>
-              <input
-                type="password"
+              <label className="block text-sm font-normal tracking-normal ml-1 mb-2" style={{color: '#cbd5e1'}}>País de Origen</label>
+              <select
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                minLength={6}
-                className="w-full px-5 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:ring-4 focus:ring-accent-blue/20 focus:border-accent-blue focus:bg-white transition-all font-normal text-base placeholder:text-slate-400"
-                style={{'--tw-ring-color': 'var(--color-accent-blue)'} as React.CSSProperties}
-              />
-              <p className="text-xs text-accent-gray ml-1">Mínimo 6 caracteres</p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-normal text-accent-gray tracking-normal ml-1 mb-2">Confirmar Contraseña</label>
-              <input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                minLength={6}
-                className="w-full px-5 py-4 rounded-2xl border border-accent-light bg-accent-light focus:outline-none focus:ring-4 focus:ring-accent-blue/20 focus:border-accent-blue focus:bg-white transition-all font-normal text-base placeholder:text-slate-400"
-                style={{'--tw-ring-color': 'var(--color-accent-blue)'} as React.CSSProperties}
-              />
+                value={pais}
+                onChange={(e) => setPais(e.target.value)}
+                className="w-full px-5 py-4 rounded-2xl border focus:outline-none focus:ring-2 transition-all font-normal text-base"
+                style={{
+                  backgroundColor: 'rgba(30, 41, 59, 0.6)',
+                  borderColor: 'rgba(148, 163, 184, 0.2)',
+                  color: '#ffffff',
+                  '--tw-ring-color': 'var(--color-accent-blue)',
+                } as React.CSSProperties}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent-blue)';
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.8)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.2)';
+                  e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                }}
+              >
+                {PAISES.map((p) => (
+                  <option key={p} value={p} style={{backgroundColor: 'rgb(30, 41, 59)', color: '#ffffff'}}>
+                    {p}
+                  </option>
+                ))}
+              </select>
             </div>
 
           <div className="flex gap-4 pt-4">
             <button
               type="button"
               onClick={() => navigate('/app/agentes')}
-              className="flex-1 px-6 py-3 border-2 border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-all"
+              className="flex-1 px-6 py-3 border-2 font-semibold rounded-xl transition-all"
+              style={{
+                borderColor: 'rgba(148, 163, 184, 0.3)',
+                color: '#cbd5e1',
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.6)';
+                e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+              }}
             >
               Cancelar
             </button>
