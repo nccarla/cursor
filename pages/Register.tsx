@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createAgent } from '../services/roundRobinService';
-import { UserPlus, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { UserPlus, Loader2, AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
 
 // Lista de países
 const PAISES = [
@@ -16,24 +16,33 @@ const Register: React.FC = () => {
   const [pais, setPais] = useState('El Salvador');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState('');
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess(false);
+    setGeneratedPassword('');
 
     try {
-      // Crear agente usando el webhook de Round Robin
-      await createAgent(name, email, pais);
+      // Crear agente usando el webhook de Round Robin (genera contraseña automáticamente)
+      const result = await createAgent(name, email, pais);
       
-      // Si llegamos aquí, el agente fue creado exitosamente
-      setError('');
-      
-      // Después de crear el agente, volver a gestión de agentes
-      setTimeout(() => {
-        navigate('/app/agentes');
-      }, 500);
+      if (result.success && result.password) {
+        // Si llegamos aquí, el agente fue creado exitosamente
+        setSuccess(true);
+        setGeneratedPassword(result.password);
+        
+        // Después de 5 segundos, volver a gestión de agentes
+        setTimeout(() => {
+          navigate('/app/agentes');
+        }, 5000);
+      } else {
+        throw new Error('No se pudo crear el agente. Intenta de nuevo.');
+      }
     } catch (err: any) {
       // Mejorar mensajes de error
       const errorMessage = err.message || 'Error al crear el agente. Intenta de nuevo.';
@@ -78,7 +87,27 @@ const Register: React.FC = () => {
         </div>
 
         <form onSubmit={handleRegister} className="space-y-6">
-          {error && (
+          {success && generatedPassword && (
+            <div className="bg-green-500/10 text-green-400 p-6 rounded-2xl flex flex-col gap-3 border-2 border-green-500/20 animate-in slide-in-from-top duration-300">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5 text-green-400" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold tracking-normal text-green-400 mb-2">¡Agente creado exitosamente!</p>
+                  <p className="text-xs font-normal text-green-300/80 mb-3">La contraseña temporal generada es:</p>
+                  <div className="bg-slate-800/50 p-4 rounded-xl border border-green-500/30">
+                    <p className="text-2xl font-bold text-center text-green-400 font-mono tracking-wider">
+                      {generatedPassword}
+                    </p>
+                  </div>
+                  <p className="text-xs font-normal text-green-300/80 mt-3">
+                    El agente puede iniciar sesión con esta contraseña. Se recomienda cambiarla después del primer acceso.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && !success && (
             <div className="bg-accent-red/10 text-brand-red p-4 rounded-2xl flex items-start gap-3 border-2 border-accent-red/20 animate-in slide-in-from-top duration-300">
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-brand-red" />
               <p className="text-sm font-normal tracking-normal text-brand-red">{error}</p>

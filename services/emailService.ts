@@ -249,12 +249,20 @@ export const emailService = {
     const codes = getStoredCodes();
     const now = Date.now();
     const emailLower = email.toLowerCase().trim();
+    const codeTrimmed = code.trim(); // Asegurar que el código no tenga espacios
+    
+    console.log('🔍 [EMAIL SERVICE] Verificando código:', {
+      email: emailLower,
+      code: codeTrimmed,
+      totalCodes: codes.length,
+      codesForEmail: codes.filter(c => c.email === emailLower).length
+    });
     
     // Buscar código válido
     const record = codes.find(
       c => 
         c.email === emailLower &&
-        c.code === code &&
+        c.code === codeTrimmed && // Comparar con código sin espacios
         !c.used &&
         c.expiresAt > now &&
         c.type === 'password_reset'
@@ -263,7 +271,7 @@ export const emailService = {
     if (!record) {
       // Verificar si el código existe pero está expirado
       const expiredRecord = codes.find(
-        c => c.email === emailLower && c.code === code && c.type === 'password_reset'
+        c => c.email === emailLower && c.code === codeTrimmed && c.type === 'password_reset'
       );
       
       if (expiredRecord && expiredRecord.expiresAt <= now) {

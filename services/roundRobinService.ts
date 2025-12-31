@@ -25,6 +25,7 @@ interface AgentWebhookPayload {
     pais?: string;
     rol?: string;
     estado?: string;
+    password?: string;
   };
 }
 
@@ -274,13 +275,33 @@ export const updateAgentStatus = async (
 };
 
 /**
- * Crea un nuevo agente en el sistema
+ * Genera una contraseña automática con formato "red" + 5 caracteres aleatorios (números y una letra)
+ */
+const generatePassword = (): string => {
+  // Generar 4 números aleatorios
+  const numbers = Math.floor(1000 + Math.random() * 9000).toString();
+  
+  // Generar una letra aleatoria (a-z)
+  const letters = 'abcdefghijklmnopqrstuvwxyz';
+  const randomLetter = letters[Math.floor(Math.random() * letters.length)];
+  
+  // Mezclar: números + letra en posición aleatoria
+  const chars = numbers.split('');
+  const letterPosition = Math.floor(Math.random() * (chars.length + 1));
+  chars.splice(letterPosition, 0, randomLetter);
+  
+  // Retornar "red" + los 5 caracteres
+  return `red${chars.join('')}`;
+};
+
+/**
+ * Crea un nuevo agente en el sistema con contraseña automática
  */
 export const createAgent = async (
   nombre: string,
   email: string,
   pais: string
-): Promise<boolean> => {
+): Promise<{ success: boolean; password?: string }> => {
   const actor = getActor();
   
   if (!actor) {
@@ -305,6 +326,9 @@ export const createAgent = async (
     throw new Error('El país es requerido.');
   }
   
+  // Generar contraseña automática
+  const password = generatePassword();
+  
   const payload: AgentWebhookPayload = {
     action: 'agent.create',
     actor: {
@@ -317,14 +341,23 @@ export const createAgent = async (
       email: email.trim().toLowerCase(),
       pais: pais.trim(),
       rol: 'AGENTE',
-      estado: 'ACTIVO'
+      estado: 'ACTIVO',
+      password: password
     }
   };
   
-  console.log('📤 Creando agente con payload:', payload);
+  console.log('📤 Creando agente con contraseña automática:', {
+    nombre: nombre.trim(),
+    email: email.trim().toLowerCase(),
+    password: password
+  });
   
   const response = await callRoundRobinWebhook(payload);
   
-  return response.success !== false && !response.error;
+  if (response.success !== false && !response.error) {
+    return { success: true, password: password };
+  }
+  
+  return { success: false };
 };
 

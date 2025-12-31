@@ -2,18 +2,29 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
-import { ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Loader2, AlertCircle, Lock, Eye, EyeOff } from 'lucide-react';
 import AnimatedBackground from '../components/AnimatedBackground';
 
 const VerifyCode: React.FC = () => {
   const [searchParams] = useSearchParams();
   const email = searchParams.get('email') || '';
   const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isEntering, setIsEntering] = useState(true);
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const navigate = useNavigate();
+
+  // Validación de contraseña
+  const validatePassword = (passwordValue: string): boolean => {
+    return passwordValue.length >= 8;
+  };
 
   useEffect(() => {
     // Animación de entrada suave
@@ -45,6 +56,8 @@ const VerifyCode: React.FC = () => {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
     
     // Validaciones
     if (code.length < 6) {
@@ -52,25 +65,31 @@ const VerifyCode: React.FC = () => {
       return;
     }
     
+    if (!validatePassword(password)) {
+      setPasswordError('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      setConfirmPasswordError('Las contraseñas no coinciden.');
+      return;
+    }
+    
     setLoading(true);
     setError('');
     setSuccess(false);
     try {
-      // Solo verificar el código
-      const response = await api.verifyResetCode(email, code);
-      if (response.ok && response.tempToken) {
-        // Si el código es válido, redirigir a la pantalla de nueva contraseña
-        setSuccess(true);
-        
-        // Redirigir a reset-password con el token y código
-        setTimeout(() => {
-          navigate(`/reset-password?email=${encodeURIComponent(email)}&tempToken=${encodeURIComponent(response.tempToken || '')}&code=${encodeURIComponent(code)}`);
-        }, 1000);
-      } else {
-        setError('Código inválido o expirado.');
-      }
+      // Enviar código y contraseña al webhook
+      await api.resetPasswordWithCode(email.trim(), password.trim(), code.trim());
+      
+      // Si es exitoso, mostrar mensaje y redirigir al login
+      setSuccess(true);
+      
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     } catch (err: any) {
-      setError(err.message || 'Error al verificar el código.');
+      setError(err.message || 'Error al restablecer la contraseña.');
     } finally {
       setLoading(false);
     }
@@ -118,7 +137,7 @@ const VerifyCode: React.FC = () => {
               animationDelay: '100ms',
             }}
           >
-            Verifica tu identidad
+            Nueva contraseña
           </h2>
           <p 
             className="text-slate-300 mt-2 font-medium transition-all duration-500"
@@ -126,7 +145,7 @@ const VerifyCode: React.FC = () => {
               animation: isEntering ? 'none' : 'fadeIn 0.5s ease-out 0.4s both',
             }}
           >
-            Hemos enviado un código a <b className="text-white">{email}</b>
+            Ingresa el código enviado a <b className="text-white">{email}</b> y tu nueva contraseña
           </p>
 
           <form 
@@ -172,12 +191,120 @@ const VerifyCode: React.FC = () => {
               />
             </div>
 
+            {/* Campo de nueva contraseña */}
+            <div>
+              <label className="block text-xs font-medium text-slate-300 tracking-normal mb-2">Nueva Contraseña</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (passwordError) setPasswordError('');
+                  }}
+                  placeholder="••••••••"
+                  className={`w-full pl-12 pr-12 py-4 rounded-2xl border text-white placeholder:text-slate-500 focus:outline-none transition-all font-medium ${
+                    passwordError ? 'border-red-500' : 'border-slate-600'
+                  }`}
+                  style={{
+                    background: 'rgba(30, 30, 30, 0.9)',
+                  }}
+                  onFocus={(e) => {
+                    if (!passwordError) {
+                      e.target.style.borderColor = 'rgba(200, 21, 27, 0.6)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(200, 21, 27, 0.15), 0 0 12px rgba(200, 21, 27, 0.1)';
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!passwordError) {
+                      e.target.style.borderColor = 'rgb(71, 85, 105)';
+                      e.target.style.boxShadow = '';
+                    }
+                    if (password && !validatePassword(password)) {
+                      setPasswordError('La contraseña debe tener al menos 8 caracteres');
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-800 rounded p-1"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  tabIndex={0}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {passwordError && (
+                <p className="mt-2 text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {passwordError}
+                </p>
+              )}
+            </div>
+
+            {/* Campo de confirmar contraseña */}
+            <div>
+              <label className="block text-xs font-medium text-slate-300 tracking-normal mb-2">Confirmar Contraseña</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    if (confirmPasswordError) setConfirmPasswordError('');
+                  }}
+                  placeholder="••••••••"
+                  className={`w-full pl-12 pr-12 py-4 rounded-2xl border text-white placeholder:text-slate-500 focus:outline-none transition-all font-medium ${
+                    confirmPasswordError ? 'border-red-500' : 'border-slate-600'
+                  }`}
+                  style={{
+                    background: 'rgba(30, 30, 30, 0.9)',
+                  }}
+                  onFocus={(e) => {
+                    if (!confirmPasswordError) {
+                      e.target.style.borderColor = 'rgba(200, 21, 27, 0.6)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(200, 21, 27, 0.15), 0 0 12px rgba(200, 21, 27, 0.1)';
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (!confirmPasswordError) {
+                      e.target.style.borderColor = 'rgb(71, 85, 105)';
+                      e.target.style.boxShadow = '';
+                    }
+                    if (confirmPassword && password !== confirmPassword) {
+                      setConfirmPasswordError('Las contraseñas no coinciden.');
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-800 rounded p-1"
+                  aria-label={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  tabIndex={0}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              {confirmPasswordError && (
+                <p className="mt-2 text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {confirmPasswordError}
+                </p>
+              )}
+            </div>
+
             {success && (
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 p-4 rounded-xl flex items-center gap-3 border-2 border-green-200 shadow-sm animate-in fade-in duration-300">
                 <ShieldCheck className="w-5 h-5 shrink-0" style={{color: 'var(--color-accent-blue-2)'}} />
                 <div className="flex-1">
-                  <p className="text-sm font-bold">Código verificado exitosamente</p>
-                  <p className="text-xs text-green-600 mt-1">Redirigiendo para establecer nueva contraseña...</p>
+                  <p className="text-sm font-bold">¡Contraseña actualizada!</p>
+                  <p className="text-xs text-green-600 mt-1">Redirigiendo al login...</p>
                 </div>
               </div>
             )}
@@ -191,19 +318,19 @@ const VerifyCode: React.FC = () => {
 
             <button
               type="submit"
-              disabled={loading || code.length < 6}
+              disabled={loading || code.length < 6 || !validatePassword(password) || password !== confirmPassword || success}
               className="w-full text-white font-semibold py-5 rounded-2xl transition-all flex items-center justify-center disabled:cursor-not-allowed"
               style={{
-                background: loading || code.length < 6
+                background: loading || code.length < 6 || !validatePassword(password) || password !== confirmPassword || success
                   ? 'linear-gradient(to right, rgba(100, 100, 100, 0.4), rgba(120, 120, 120, 0.4))'
                   : 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))',
-                boxShadow: loading || code.length < 6
+                boxShadow: loading || code.length < 6 || !validatePassword(password) || password !== confirmPassword || success
                   ? 'none'
                   : '0 4px 14px rgba(200, 21, 27, 0.3), 0 0 20px rgba(200, 21, 27, 0.15)',
-                opacity: loading || code.length < 6 ? 0.5 : 1,
+                opacity: loading || code.length < 6 || !validatePassword(password) || password !== confirmPassword || success ? 0.5 : 1,
               }}
               onMouseEnter={(e) => {
-                if (!e.currentTarget.disabled && !loading && code.length >= 6) {
+                if (!e.currentTarget.disabled && !loading) {
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow = '0 6px 20px rgba(200, 21, 27, 0.4), 0 0 25px rgba(200, 21, 27, 0.2)';
                 }
@@ -211,13 +338,20 @@ const VerifyCode: React.FC = () => {
               onMouseLeave={(e) => {
                 if (!e.currentTarget.disabled) {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = loading || code.length < 6
+                  e.currentTarget.style.boxShadow = loading || code.length < 6 || !validatePassword(password) || password !== confirmPassword || success
                     ? 'none'
                     : '0 4px 14px rgba(200, 21, 27, 0.3), 0 0 20px rgba(200, 21, 27, 0.15)';
                 }
               }}
             >
-              {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Verificar Código'}
+              {loading ? (
+                <>
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                  Procesando...
+                </>
+              ) : (
+                'Restablecer Contraseña'
+              )}
             </button>
 
             <button 
