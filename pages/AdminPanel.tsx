@@ -240,31 +240,31 @@ const AdminPanel: React.FC = () => {
     if (!estados || estados.length === 0) {
       // Fallback a estados hardcodeados si no hay estados del webhook
       return {
-        nuevo: casosSeguros.filter(c => {
-          if (!c) return false;
-          return normalizeStatus(c.status) === CaseStatus.NUEVO;
-        }).length,
-        enProceso: casosSeguros.filter(c => {
-          if (!c) return false;
-          return normalizeStatus(c.status) === CaseStatus.EN_PROCESO;
-        }).length,
-        pendienteCliente: casosSeguros.filter(c => {
-          if (!c) return false;
-          return normalizeStatus(c.status) === CaseStatus.PENDIENTE_CLIENTE;
-        }).length,
-        escalado: casosSeguros.filter(c => {
-          if (!c) return false;
-          return normalizeStatus(c.status) === CaseStatus.ESCALADO;
-        }).length,
-        resuelto: casosSeguros.filter(c => {
-          if (!c) return false;
-          return normalizeStatus(c.status) === CaseStatus.RESUELTO;
-        }).length,
-        cerrado: casosSeguros.filter(c => {
-          if (!c) return false;
-          return normalizeStatus(c.status) === CaseStatus.CERRADO;
-        }).length
-      };
+    nuevo: casosSeguros.filter(c => {
+      if (!c) return false;
+      return normalizeStatus(c.status) === CaseStatus.NUEVO;
+    }).length,
+    enProceso: casosSeguros.filter(c => {
+      if (!c) return false;
+      return normalizeStatus(c.status) === CaseStatus.EN_PROCESO;
+    }).length,
+    pendienteCliente: casosSeguros.filter(c => {
+      if (!c) return false;
+      return normalizeStatus(c.status) === CaseStatus.PENDIENTE_CLIENTE;
+    }).length,
+    escalado: casosSeguros.filter(c => {
+      if (!c) return false;
+      return normalizeStatus(c.status) === CaseStatus.ESCALADO;
+    }).length,
+    resuelto: casosSeguros.filter(c => {
+      if (!c) return false;
+      return normalizeStatus(c.status) === CaseStatus.RESUELTO;
+    }).length,
+    cerrado: casosSeguros.filter(c => {
+      if (!c) return false;
+      return normalizeStatus(c.status) === CaseStatus.CERRADO;
+    }).length
+  };
     }
 
     // Usar estados dinámicos del webhook
@@ -409,13 +409,13 @@ const AdminPanel: React.FC = () => {
       // Si no hay categorías del webhook, usar las categorías de los casos como fallback
       if (!categorias || categorias.length === 0) {
         console.log('[AdminPanel] No hay categorías del webhook, usando categorías de casos');
-        const categoriaCounts: Record<string, number> = {};
-        casosSeguros.forEach(caso => {
-          if (!caso) return;
-          const categoriaNombre = caso.categoria?.nombre || caso.category || 'Sin categoría';
-          categoriaCounts[categoriaNombre] = (categoriaCounts[categoriaNombre] || 0) + 1;
-        });
-        
+      const categoriaCounts: Record<string, number> = {};
+      casosSeguros.forEach(caso => {
+        if (!caso) return;
+        const categoriaNombre = caso.categoria?.nombre || caso.category || 'Sin categoría';
+        categoriaCounts[categoriaNombre] = (categoriaCounts[categoriaNombre] || 0) + 1;
+      });
+      
         // Paleta de colores mejorada y más vibrante
         const colors = [
           '#3b82f6', // Azul vibrante
@@ -429,11 +429,11 @@ const AdminPanel: React.FC = () => {
           '#f97316', // Naranja
           '#84cc16'  // Verde lima
         ];
-        return Object.entries(categoriaCounts).map(([name, value], index) => ({
-          name: name.length > 15 ? name.substring(0, 15) + '...' : name,
-          value,
-          color: colors[index % colors.length]
-        })).sort((a, b) => b.value - a.value).slice(0, 8);
+      return Object.entries(categoriaCounts).map(([name, value], index) => ({
+        name: name.length > 15 ? name.substring(0, 15) + '...' : name,
+        value,
+        color: colors[index % colors.length]
+      })).sort((a, b) => b.value - a.value).slice(0, 8);
       }
 
       // Usar las categorías del webhook (las creadas en Settings)

@@ -71,7 +71,8 @@ const Settings: React.FC = () => {
     name: string;
   } | null>(null);
 
-  // Estados para parámetros de estados finales
+  // Estados para parámetros de estados finales - COMENTADO TEMPORALMENTE
+  /*
   type TipoParametro = 'correo' | 'adjuntar_archivo' | 'telefono' | 'texto' | 'numero' | 'fecha' | 'checkbox';
 
   interface Parametro {
@@ -128,6 +129,7 @@ const Settings: React.FC = () => {
     id: string;
     name: string;
   } | null>(null);
+  */
 
   // Estados iniciales solo como placeholder; los IDs REALES vienen del webhook (normalizados)
   const [states, setStates] = useState([
@@ -810,10 +812,11 @@ const Settings: React.FC = () => {
     }
   };
 
-  // Estados para editar parámetro
-  const [editingParametroId, setEditingParametroId] = useState<string | null>(null);
+  // Estados para editar parámetro - COMENTADO TEMPORALMENTE
+  // const [editingParametroId, setEditingParametroId] = useState<string | null>(null);
 
-  // Funciones para manejar parámetros de estados finales
+  // Funciones para manejar parámetros de estados finales - COMENTADO TEMPORALMENTE
+  /*
   const handleOpenParametroModal = (parametro?: Parametro) => {
     if (parametro) {
       setIsEditingParametro(true);
@@ -1024,8 +1027,8 @@ const Settings: React.FC = () => {
     setFilteredParametros(filtered);
   }, [parametroSearchTerm, parametros]);
 
-  const getTipoLabel = (tipo: TipoParametro): string => {
-    const labels: Record<TipoParametro, string> = {
+  const getTipoLabel = (tipo: any): string => {
+    const labels: Record<string, string> = {
       'correo': 'Correo Electrónico',
       'adjuntar_archivo': 'Adjuntar Archivo',
       'telefono': 'Teléfono',
@@ -1036,6 +1039,7 @@ const Settings: React.FC = () => {
     };
     return labels[tipo] || tipo;
   };
+  */
 
   // Función para convertir nombre de estado a ID (ej: "En Proceso" -> "en_proceso")
   const nombreToId = (nombre: string): string => {
@@ -2216,11 +2220,11 @@ const Settings: React.FC = () => {
       name: 'Asuetos',
       icon: Calendar
     },
-    {
-      id: 'parametros-finales',
-      name: 'Parámetros Estados Finales',
-      icon: FileText
-    }
+    // {
+    //   id: 'parametros-finales',
+    //   name: 'Parámetros Estados Finales',
+    //   icon: FileText
+    // }
   ];
 
   return (
@@ -5074,7 +5078,8 @@ const Settings: React.FC = () => {
         )}
 
 
-        {activeTab === 'parametros-finales' && (
+        {/* COMENTADO TEMPORALMENTE - Pantalla de Parámetros Estados Finales */}
+        {false && activeTab === 'parametros-finales' && (
           <div 
             className="p-6 rounded-lg border"
             style={{
@@ -5914,7 +5919,7 @@ const Settings: React.FC = () => {
         )}
 
         {/* Placeholder para otras secciones - se completarán con las siguientes imágenes */}
-        {activeTab !== 'configuracion' && activeTab !== 'categorias' && activeTab !== 'estados-flujo' && activeTab !== 'usuarios' && activeTab !== 'asuetos' && activeTab !== 'parametros-finales' && (
+        {activeTab !== 'configuracion' && activeTab !== 'categorias' && activeTab !== 'estados-flujo' && activeTab !== 'usuarios' && activeTab !== 'asuetos' && (
           <div className="p-6 rounded-lg border" style={{...styles.card}}>
             <p className="text-sm" style={{ color: styles.text.tertiary }}>
               Sección "{tabs.find(t => t.id === activeTab)?.name}" - Pendiente de implementar
