@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import { Case, CaseStatus, KPI } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { TrendingUp, Users, Clock, ThumbsUp, ArrowUp, ArrowDown, Info, AlertTriangle, CheckCircle2, Filter, Zap, Target, TrendingDown, Shield, Activity } from 'lucide-react';
+import { TrendingUp, Users, Clock, ThumbsUp, ArrowUp, ArrowDown, Info, AlertTriangle, CheckCircle2, Filter, Zap, Target, TrendingDown, Shield, Activity, ChevronDown } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import LoadingScreen from '../components/LoadingScreen';
 
@@ -15,6 +15,7 @@ const GerenteDashboard: React.FC = () => {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('hoy');
   const [loading, setLoading] = useState(true);
   const [hoveredKPI, setHoveredKPI] = useState<string | null>(null);
+  const [resumenExpanded, setResumenExpanded] = useState(false);
   const { theme } = useTheme();
   const location = useLocation();
 
@@ -641,111 +642,115 @@ const GerenteDashboard: React.FC = () => {
       </div>
 
       {/* Resumen Ejecutivo Mejorado */}
-      {insights.length > 0 && (
-        <div 
-          className="p-4 rounded-xl border shadow-lg" 
-          style={{
-            ...styles.card,
-            background: theme === 'dark' 
-              ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)'
-              : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)',
-            animation: 'fadeInSlide 0.4s ease-out'
-          }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-lg" style={{
-                backgroundColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
-              }}>
-                <Shield className="w-4 h-4" style={{color: '#3b82f6'}} />
-              </div>
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-wider" style={{color: styles.text.primary}}>
-                  Resumen Ejecutivo
-                </h3>
-                <p className="text-[10px] font-medium mt-0.5" style={{color: styles.text.tertiary}}>
-                  Visión general del estado operativo
-                </p>
-              </div>
-            </div>
-            <div className="px-2.5 py-1 rounded-lg" style={{
-              backgroundColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
-            }}>
-              <span className="text-xs font-bold" style={{color: '#3b82f6'}}>
-                {insights.length} {insights.length === 1 ? 'indicador' : 'indicadores'}
-              </span>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {insights.map((insight, idx) => {
-              const Icon = insight.icon;
-              const bgColor = theme === 'dark' 
-                ? `${insight.color}15`
-                : `${insight.color}10`;
-              const borderColor = theme === 'dark'
-                ? `${insight.color}30`
-                : `${insight.color}25`;
-              
-              return (
-                <div
-                  key={idx}
-                  className="p-3 rounded-lg border-2 transition-all duration-200 hover:scale-[1.02] hover:shadow-md"
-                  style={{
-                    backgroundColor: bgColor,
-                    borderColor: borderColor,
-                    animation: `fadeInSlide 0.3s ease-out ${idx * 0.05}s both`
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = `${insight.color}50`;
-                    e.currentTarget.style.boxShadow = `0 4px 12px ${insight.color}20`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = borderColor;
-                    e.currentTarget.style.boxShadow = '';
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div 
-                      className="p-2 rounded-lg flex-shrink-0"
-                      style={{
-                        backgroundColor: theme === 'dark' 
-                          ? `${insight.color}20`
-                          : `${insight.color}15`
-                      }}
-                    >
-                      <Icon className="w-4 h-4" style={{color: insight.color}} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <h4 className="text-xs font-bold" style={{color: styles.text.primary}}>
-                          {insight.title}
-                        </h4>
-                        {insight.value && (
-                          <span 
-                            className="text-xs font-black px-2 py-0.5 rounded"
-                            style={{
-                              color: insight.color,
-                              backgroundColor: theme === 'dark'
-                                ? `${insight.color}20`
-                                : `${insight.color}15`
-                            }}
-                          >
-                            {insight.value}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[10px] leading-relaxed" style={{color: styles.text.secondary}}>
-                        {insight.description}
-                      </p>
-                    </div>
-                  </div>
+      {insights.length > 0 && (() => {
+        // Agrupar insights por tipo
+        const criticalInsights = insights.filter(i => i.type === 'critical');
+        const warningInsights = insights.filter(i => i.type === 'warning');
+        const successInsights = insights.filter(i => i.type === 'success');
+        const infoInsights = insights.filter(i => i.type === 'info');
+        
+        return (
+          <div 
+            className="p-5 rounded-xl border shadow-lg" 
+            style={{
+              ...styles.card,
+              background: theme === 'dark' 
+                ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)',
+              animation: 'fadeInSlide 0.4s ease-out'
+            }}
+          >
+            {/* Header - Clickable */}
+            <button
+              onClick={() => setResumenExpanded(!resumenExpanded)}
+              className="w-full flex items-center justify-between mb-0 pb-4 border-b transition-all duration-200 cursor-pointer"
+              style={{
+                borderColor: 'rgba(148, 163, 184, 0.2)',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: '1px solid rgba(148, 163, 184, 0.2)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderBottomColor = 'rgba(59, 130, 246, 0.4)';
+                e.currentTarget.style.backgroundColor = theme === 'dark' ? 'rgba(59, 130, 246, 0.05)' : 'rgba(59, 130, 246, 0.02)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderBottomColor = 'rgba(148, 163, 184, 0.2)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg" style={{
+                  backgroundColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
+                }}>
+                  <Shield className="w-5 h-5" style={{color: '#3b82f6'}} />
                 </div>
-              );
-            })}
+                <div className="text-left">
+                  <h3 className="text-base font-black uppercase tracking-wider" style={{color: styles.text.primary}}>
+                    Resumen Ejecutivo
+                  </h3>
+                  <p className="text-xs font-medium mt-0.5" style={{color: styles.text.tertiary}}>
+                    Visión general del estado operativo
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="px-3 py-1.5 rounded-lg" style={{
+                  backgroundColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'
+                }}>
+                  <span className="text-xs font-bold" style={{color: '#3b82f6'}}>
+                    {insights.length} {insights.length === 1 ? 'indicador' : 'indicadores'}
+                  </span>
+                </div>
+                <ChevronDown 
+                  className="w-5 h-5 transition-transform duration-300" 
+                  style={{
+                    color: styles.text.tertiary,
+                    transform: resumenExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                  }}
+                />
+              </div>
+            </button>
+            
+            {/* Contenido - Lista simple - Solo visible cuando está expandido */}
+            {resumenExpanded && (
+              <div className="mt-5 animate-in fade-in slide-in-from-top-2 duration-300">
+                <ul className="space-y-2 list-none">
+                  {insights.map((insight, idx) => {
+                    const Icon = insight.icon;
+                    return (
+                      <li 
+                        key={idx}
+                        className="py-2 border-b last:border-b-0"
+                        style={{borderColor: 'rgba(148, 163, 184, 0.2)'}}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{color: styles.text.tertiary}} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-medium" style={{color: styles.text.primary}}>
+                                {insight.title}
+                              </span>
+                              {insight.value && (
+                                <span className="text-xs font-semibold" style={{color: styles.text.secondary}}>
+                                  {insight.value}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs mt-1 leading-relaxed" style={{color: styles.text.secondary}}>
+                              {insight.description}
+                            </p>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Gráficas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

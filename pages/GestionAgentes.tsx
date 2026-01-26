@@ -18,7 +18,9 @@ import {
   CheckCircle2,
   TrendingUp,
   Clock,
-  Search
+  Search,
+  Filter,
+  ArrowUpDown
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import LoadingScreen from '../components/LoadingScreen';
@@ -37,6 +39,11 @@ const GestionAgentes: React.FC = () => {
   const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  
+  // Estados para filtros y ordenamiento
+  const [estadoFilter, setEstadoFilter] = useState<string>('todos');
+  const [sortBy, setSortBy] = useState<'nombre' | 'casos' | 'roundRobin'>('roundRobin');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
 
   useEffect(() => {
@@ -232,16 +239,52 @@ const GestionAgentes: React.FC = () => {
     inactivos: agentes.filter(a => a.estado === 'Inactivo').length
   };
 
-  // Filtrar agentes por término de búsqueda
+  // Filtrar y ordenar agentes
   const filteredAgentes = React.useMemo(() => {
-    if (!searchTerm.trim()) {
-      return agentes;
+    let filtered = [...agentes];
+    
+    // Filtro por búsqueda
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(agente => 
+        agente.nombre.toLowerCase().includes(term) ||
+        agente.email?.toLowerCase().includes(term)
+      );
     }
-    const term = searchTerm.toLowerCase().trim();
-    return agentes.filter(agente => 
-      agente.nombre.toLowerCase().includes(term)
-    );
-  }, [agentes, searchTerm]);
+    
+    // Filtro por estado
+    if (estadoFilter !== 'todos') {
+      filtered = filtered.filter(agente => agente.estado === estadoFilter);
+    }
+    
+    // Ordenamiento
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'nombre':
+          comparison = a.nombre.localeCompare(b.nombre);
+          break;
+        case 'casos':
+          comparison = a.casosActivos - b.casosActivos;
+          break;
+        case 'roundRobin':
+          const ordenA = a.ordenRoundRobin || 999;
+          const ordenB = b.ordenRoundRobin || 999;
+          comparison = ordenA - ordenB;
+          // Si tienen el mismo orden, priorizar activos
+          if (comparison === 0) {
+            if (a.estado === 'Activo' && b.estado !== 'Activo') return -1;
+            if (a.estado !== 'Activo' && b.estado === 'Activo') return 1;
+          }
+          break;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+    
+    return filtered;
+  }, [agentes, searchTerm, estadoFilter, sortBy, sortOrder]);
 
   // Generar sugerencias de autocompletado
   const suggestions = React.useMemo(() => {
@@ -344,34 +387,66 @@ const GestionAgentes: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full" style={{ overflow: 'hidden', gap: '1rem', ...styles.container }}>
-      <div className="p-4 rounded-xl border flex-shrink-0 flex justify-between items-center" style={{...styles.card}}>
-         <div className="flex items-center gap-3">
-           <div className="flex items-center gap-1.5">
-             <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#22c55e'}}></div>
-             <span className="text-xs font-semibold" style={{color: styles.text.secondary}}>
-               {resumenAgentes.activos} <span style={{color: styles.text.tertiary}}>Activos</span>
-             </span>
-           </div>
-           {resumenAgentes.vacaciones > 0 && (
-             <div className="flex items-center gap-1.5">
-               <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#f59e0b'}}></div>
-               <span className="text-xs font-semibold" style={{color: styles.text.secondary}}>
-                 {resumenAgentes.vacaciones} <span style={{color: styles.text.tertiary}}>Vacaciones</span>
-               </span>
-             </div>
-           )}
-           {resumenAgentes.inactivos > 0 && (
-             <div className="flex items-center gap-1.5">
-               <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#ef4444'}}></div>
-               <span className="text-xs font-semibold" style={{color: styles.text.secondary}}>
-                 {resumenAgentes.inactivos} <span style={{color: styles.text.tertiary}}>Inactivos</span>
-               </span>
-             </div>
-           )}
-         </div>
-         <div className="flex items-center gap-3">
-           {/* Campo de búsqueda */}
-           <div className="relative" style={{ minWidth: '250px' }}>
+      <div className="p-4 rounded-xl border flex-shrink-0" style={{...styles.card}}>
+        {/* Header con resumen y acciones */}
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#22c55e'}}></div>
+              <span className="text-xs font-semibold" style={{color: styles.text.secondary}}>
+                {resumenAgentes.activos} <span style={{color: styles.text.tertiary}}>Activos</span>
+              </span>
+            </div>
+            {resumenAgentes.vacaciones > 0 && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#f59e0b'}}></div>
+                <span className="text-xs font-semibold" style={{color: styles.text.secondary}}>
+                  {resumenAgentes.vacaciones} <span style={{color: styles.text.tertiary}}>Vacaciones</span>
+                </span>
+              </div>
+            )}
+            {resumenAgentes.inactivos > 0 && (
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{backgroundColor: '#ef4444'}}></div>
+                <span className="text-xs font-semibold" style={{color: styles.text.secondary}}>
+                  {resumenAgentes.inactivos} <span style={{color: styles.text.tertiary}}>Inactivos</span>
+                </span>
+              </div>
+            )}
+            <div className="h-4 w-px" style={{backgroundColor: 'rgba(148, 163, 184, 0.2)'}}></div>
+            <span className="text-xs font-semibold" style={{color: styles.text.tertiary}}>
+              {filteredAgentes.length} de {agentes.length} agentes
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Botón refresh */}
+            <button
+              onClick={loadAgentes}
+              className="p-2 rounded-lg border transition-all hover:scale-105"
+              style={{
+                borderColor: 'rgba(148, 163, 184, 0.2)',
+                backgroundColor: theme === 'dark' ? '#0f172a' : '#f8fafc',
+                color: styles.text.secondary
+              }}
+              title="Actualizar datos"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => navigate('/app/crear-cuenta')}
+              className="px-4 py-2 text-white text-xs font-bold rounded-lg hover:shadow-lg transition-all flex items-center gap-2 hover:-translate-y-0.5"
+              style={{background: 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 4px 12px rgba(200, 21, 27, 0.2)'}}
+            >
+              <UserPlus className="w-4 h-4" />
+              Nueva Cuenta
+            </button>
+          </div>
+        </div>
+        
+        {/* Barra de filtros */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Campo de búsqueda */}
+          <div className="relative flex-1" style={{ minWidth: '250px' }}>
              <div className="relative">
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{color: styles.text.tertiary}} />
                <input
@@ -444,17 +519,89 @@ const GestionAgentes: React.FC = () => {
                  ))}
                </div>
              )}
-           </div>
-           
-           <button 
-             onClick={() => navigate('/app/crear-cuenta')}
-             className="px-4 py-2 text-white text-xs font-bold rounded-lg hover:shadow-lg transition-all flex items-center gap-2 hover:-translate-y-0.5"
-             style={{background: 'linear-gradient(to right, var(--color-brand-red), var(--color-accent-red))', boxShadow: '0 4px 12px rgba(200, 21, 27, 0.2)'}}
-           >
-             <UserPlus className="w-4 h-4" />
-             Nueva Cuenta
-           </button>
-         </div>
+          </div>
+          
+          {/* Filtro por estado */}
+          <div className="flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5" style={{color: styles.text.tertiary}} />
+            <select
+              value={estadoFilter}
+              onChange={(e) => setEstadoFilter(e.target.value)}
+              className="px-2.5 py-1.5 text-[10px] font-semibold rounded-lg border focus:outline-none transition-all"
+              style={{
+                backgroundColor: theme === 'dark' ? '#0f172a' : '#f8fafc',
+                borderColor: 'rgba(148, 163, 184, 0.3)',
+                color: styles.text.secondary
+              }}
+            >
+              <option value="todos">Todos los estados</option>
+              <option value="Activo">Activos</option>
+              <option value="Vacaciones">Vacaciones</option>
+              <option value="Inactivo">Inactivos</option>
+            </select>
+          </div>
+          
+          {/* Ordenamiento */}
+          <div className="flex items-center gap-1.5">
+            <ArrowUpDown className="w-3.5 h-3.5" style={{color: styles.text.tertiary}} />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-2.5 py-1.5 text-[10px] font-semibold rounded-lg border focus:outline-none transition-all"
+              style={{
+                backgroundColor: theme === 'dark' ? '#0f172a' : '#f8fafc',
+                borderColor: 'rgba(148, 163, 184, 0.3)',
+                color: styles.text.secondary
+              }}
+            >
+              <option value="roundRobin">Round Robin</option>
+              <option value="nombre">Nombre</option>
+              <option value="casos">Casos Activos</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              className="p-1.5 rounded-lg border transition-all"
+              style={{
+                borderColor: 'rgba(148, 163, 184, 0.2)',
+                backgroundColor: theme === 'dark' ? '#0f172a' : '#f8fafc',
+                color: styles.text.secondary
+              }}
+              title={sortOrder === 'asc' ? 'Orden ascendente' : 'Orden descendente'}
+            >
+              {sortOrder === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
+          
+          {/* Limpiar filtros */}
+          {(searchTerm || estadoFilter !== 'todos' || sortBy !== 'roundRobin') && (
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setEstadoFilter('todos');
+                setSortBy('roundRobin');
+                setSortOrder('asc');
+                setShowSuggestions(false);
+              }}
+              className="px-2.5 py-1.5 text-[10px] font-semibold flex items-center gap-1.5 transition-colors rounded-lg border"
+              style={{
+                borderColor: 'rgba(148, 163, 184, 0.2)',
+                backgroundColor: 'transparent',
+                color: styles.text.tertiary
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = styles.text.secondary;
+                e.currentTarget.style.backgroundColor = theme === 'dark' ? '#0f172a' : '#f8fafc';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = styles.text.tertiary;
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <X className="w-3 h-3" />
+              Limpiar
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabla de agentes */}
@@ -512,10 +659,11 @@ const GestionAgentes: React.FC = () => {
       ) : (
           <div className="rounded-xl border overflow-hidden" style={{...styles.card}}>
             {/* Mensaje de resultados de búsqueda */}
-            {searchTerm && filteredAgentes.length > 0 && (
+            {(searchTerm || estadoFilter !== 'todos') && filteredAgentes.length > 0 && (
               <div className="p-3 border-b" style={{borderColor: 'rgba(148, 163, 184, 0.2)'}}>
                 <p className="text-xs text-center" style={{color: styles.text.tertiary}}>
-                  Mostrando {filteredAgentes.length} resultado(s) para "{searchTerm}"
+                  Mostrando {filteredAgentes.length} agente{filteredAgentes.length !== 1 ? 's' : ''}
+                  {searchTerm && ` que coinciden con "${searchTerm}"`}
                 </p>
               </div>
             )}
