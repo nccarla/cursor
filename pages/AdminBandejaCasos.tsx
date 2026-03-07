@@ -1,0 +1,1033 @@
+﻿import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { api } from '../services/api';
+import { Case, CaseStatus, Cliente, Categoria, Agente } from '../types';
+import { Search, Plus, Filter, ChevronRight, X, Calendar, User, Clock, AlertTriangle, Timer, HelpCircle } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
+import LoadingScreen from '../components/LoadingScreen';
+import LoadingLogo from '../components/LoadingLogo';
+
+const AdminBandejaCasos: React.FC = () => {
+  const [casos, setCasos] = useState<Case[]>([]);
+  const [filtered, setFiltered] = useState<Case[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [categoriaFilter, setCategoriaFilter] = useState<string>('all');
+  const [clienteFilter, setClienteFilter] = useState<string>('all');
+  const [agenteFilter, setAgenteFilter] = useState<string>('all');
+  const [slaFilter, setSlaFilter] = useState<string>('all'); // all, vencido, en-riesgo, dentro-sla
+  const [fechaFilter, setFechaFilter] = useState<string>('all'); // all, hoy, semana, mes
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [agentes, setAgentes] = useState<Agente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { theme } = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentUser = api.getUser();
+  const canCreateCase = currentUser?.role === 'AGENTE' || currentUser?.role === 'SUPERVISOR';
+
+  // FunciÃ³n para normalizar el estado del caso
+  const normalizeStatus = (status: string | CaseStatus | undefined): CaseStatus => {
+    if (!status) return CaseStatus.NUEVO;
+    const statusStr = String(status).trim();
+    const statusValues = Object.values(CaseStatus);
+    const matchedStatus = statusValues.find(s => {
+      const sNormalized = s.toLowerCase().replace(/\s+/g, '');
+      const statusNormalized = statusStr.toLowerCase().replace(/\s+/g, '');
+      return s === statusStr || s.toLowerCase() === statusStr.toLowerCase() || sNormalized === statusNormalized;
+    });
+    return (matchedStatus as CaseStatus) || CaseStatus.NUEVO;
+  };
+
+  const formatCountry = (value?: string) => {
+    if (!value) return 'N/A';
+    const normalized = value.toString().trim().toUpperCase();
+    if (!normalized) return 'N/A';
+    if (normalized === 'SV' || normalized === 'GT') return normalized;
+    if (normalized === 'EL SALVADOR' || normalized === 'EL_SALVADOR' || normalized === 'ELSALVADOR') return 'SV';
+    if (normalized === 'GUATEMALA') return 'GT';
+    return value;
+  };
+
+  const getCaseCountry = (caso: Case) => {
+    const rawCountry = (caso as any).pais || (caso as any).country || caso.cliente?.pais;
+    return formatCountry(rawCountry);
+  };
+
+  const normalizeKey = (value: unknown): string => {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '_');
+  };
+
+  const getCaseStatusLabel = (caso: Case): string => {
+    return String((caso as any).estado || caso.status || 'Sin estado').trim() || 'Sin estado';
+  };
+
+  const getCaseStatusKey = (caso: Case): string => {
+    return normalizeKey(getCaseStatusLabel(caso));
+  };
+
+  const getCaseCategoryInfo = (caso: Case): { key: string; label: string } => {
+    const categoriaId = String(
+      caso.categoria?.idCategoria ||
+      (caso as any).categoria_id ||
+      (caso as any).categoriaId ||
+      (caso.categoria as any)?.id ||
+      ''
+    ).trim();
+    const categoriaNombre = String(caso.category || caso.categoria?.nombre || 'General').trim() || 'General';
+    const key = categoriaId ? `id:${categoriaId}` : `name:${normalizeKey(categoriaNombre)}`;
+    return { key, label: categoriaNombre };
+  };
+
+  const getCaseClientInfo = (caso: Case): { id: string; label: string } => {
+    const clientId = String(caso.clientId || caso.cliente?.idCliente || (caso as any).cliente_id || '').trim();
+    const clientLabel = String(caso.clientName || caso.cliente?.nombreEmpresa || 'Por definir').trim() || 'Por definir';
+    return { id: clientId, label: clientLabel };
+  };
+
+  // Resolver el ID de agente priorizando el dato del caso (webhook case.read)
+  const getCaseAgentId = (caso: Case): string => {
+    const fromCase = (caso as any).agente_user_id || (caso as any).agente_id || caso.agentId;
+    const fromAssigned = caso.agenteAsignado?.idAgente || (caso.agenteAsignado as any)?.id_agente || caso.agenteAsignado?.id;
+    const agentObject = (caso as any).agent || null;
+    const fromAgentObject = agentObject?.idAgente || agentObject?.id_agente || agentObject?.agente_id || agentObject?.id;
+
+    return String(fromCase || fromAssigned || fromAgentObject || '').trim();
+  };
+
+  const statusOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    casos.forEach((caso) => {
+      const key = getCaseStatusKey(caso);
+      const label = getCaseStatusLabel(caso);
+      if (key) seen.set(key, label);
+    });
+    return Array.from(seen.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
+  }, [casos]);
+
+  const categoryOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    casos.forEach((caso) => {
+      const info = getCaseCategoryInfo(caso);
+      if (info.key) seen.set(info.key, info.label);
+    });
+    return Array.from(seen.entries())
+      .map(([key, label]) => ({ key, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
+  }, [casos]);
+
+  const clientOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    casos.forEach((caso) => {
+      const info = getCaseClientInfo(caso);
+      if (info.id) seen.set(info.id, info.label);
+    });
+    return Array.from(seen.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
+  }, [casos]);
+
+  const agentOptions = useMemo(() => {
+    const seen = new Set<string>();
+    casos.forEach((caso) => {
+      const id = getCaseAgentId(caso);
+      if (id) seen.add(id);
+    });
+    return Array.from(seen.values()).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  }, [casos]);
+
+  // Cargar datos iniciales y cuando cambia la vista
+  useEffect(() => {
+    const initializeData = async () => {
+      try {
+        await Promise.all([loadClientes(), loadCategorias(), loadAgentes()]);
+        await loadCasos();
+      } catch (err) {
+      }
+    };
+    initializeData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  // Enriquecer casos con clientes y categorÃ­as
+  useEffect(() => {
+    if (casos.length === 0 || (clientes.length === 0 && categorias.length === 0)) {
+      return;
+    }
+
+    const casosEnriquecidos = casos.map(caso => {
+      let casoActualizado = { ...caso };
+
+      // Enriquecer con cliente
+      if (clientes.length > 0 && caso.clientId) {
+        const clienteCompleto = clientes.find(c => {
+          const normalizeId = (id: string) => {
+            if (!id) return '';
+            let normalized = id.trim().toUpperCase();
+            if (!normalized.startsWith('CL')) {
+              normalized = 'CL' + normalized.replace(/^CL/i, '');
+            }
+            const match = normalized.match(/^CL0*(\d+)$/);
+            if (match) {
+              const num = match[1];
+              normalized = 'CL' + num.padStart(6, '0');
+            }
+            return normalized;
+          };
+          
+          const casoClientIdNormalized = normalizeId(caso.clientId);
+          const cliIdNormalized = normalizeId(c.idCliente);
+          if (casoClientIdNormalized === cliIdNormalized) return true;
+          if (c.idCliente === caso.clientId) return true;
+          const casoNum = caso.clientId.replace(/\D/g, '');
+          const cliNum = c.idCliente.replace(/\D/g, '');
+          if (casoNum && cliNum && casoNum === cliNum) return true;
+          return false;
+        });
+
+        if (clienteCompleto) {
+          casoActualizado = {
+            ...casoActualizado,
+            clientName: caso.clientName && caso.clientName.trim() !== '' && caso.clientName !== 'Por definir' 
+              ? caso.clientName 
+              : clienteCompleto.nombreEmpresa,
+            clientId: clienteCompleto.idCliente || caso.clientId,
+            cliente: clienteCompleto,
+            clientEmail: caso.clientEmail || clienteCompleto.email,
+            clientPhone: caso.clientPhone || clienteCompleto.telefono,
+          };
+        }
+      }
+
+      // Enriquecer con categorÃ­a
+      if (categorias.length > 0) {
+        const categoriaId = caso.categoria?.idCategoria || (caso as any).categoria_id || (caso as any).categoriaId;
+        if (categoriaId) {
+          const categoriaCompleta = categorias.find(cat => 
+            String(cat.idCategoria) === String(categoriaId)
+          );
+          if (categoriaCompleta) {
+            casoActualizado = {
+              ...casoActualizado,
+              category: categoriaCompleta.nombre,
+              categoria: categoriaCompleta,
+            };
+          }
+        }
+      }
+
+      // Enriquecer con agente
+      if (agentes.length > 0) {
+        const agentObject = (caso as any).agent || caso.agenteAsignado || null;
+        const agenteIdFromAgent = agentObject?.idAgente || agentObject?.id || agentObject?.id_agente || agentObject?.agente_id || '';
+        const agenteIdFromObject = caso.agenteAsignado?.idAgente || caso.agenteAsignado?.id || (caso.agenteAsignado as any)?.id_agente || (caso.agenteAsignado as any)?.agente_id;
+        const agenteIdFromCase = caso.agentId || (caso as any).agente_id || (caso as any).agente_user_id;
+        const agenteId = agenteIdFromCase || agenteIdFromObject || agenteIdFromAgent;
+
+        if (agenteId) {
+          const extractIdNumber = (id: string): string => {
+            const match = id.match(/(\d+)$/);
+            return match ? match[1] : id;
+          };
+          
+          const normalizeId = (id: string): string => {
+            const numStr = extractIdNumber(id);
+            if (/^\d+$/.test(numStr)) {
+              return String(Number(numStr));
+            }
+            return numStr;
+          };
+
+          const agenteEncontrado = agentes.find(a => {
+            const aId = String(a.idAgente || '').trim();
+            const searchId = String(agenteId).trim();
+            if (aId === searchId) return true;
+            if (aId.toLowerCase() === searchId.toLowerCase()) return true;
+            const aIdNormalized = normalizeId(aId);
+            const searchIdNormalized = normalizeId(searchId);
+            if (aIdNormalized === searchIdNormalized) return true;
+            const aIdNum = Number(aId.replace(/[^\d]/g, ''));
+            const searchIdNum = Number(searchId.replace(/[^\d]/g, ''));
+            if (!isNaN(aIdNum) && !isNaN(searchIdNum) && aIdNum > 0 && searchIdNum > 0 && aIdNum === searchIdNum) return true;
+            return false;
+          });
+
+          if (agenteEncontrado) {
+            const currentAgentId = String(
+              caso.agentId ||
+              caso.agenteAsignado?.idAgente ||
+              (caso.agenteAsignado as any)?.id ||
+              (caso as any).agente_id ||
+              (caso as any).agente_user_id ||
+              ''
+            ).trim();
+            const currentAgentName = String(caso.agenteAsignado?.nombre || caso.agentName || '').trim();
+            const resolvedAgentId = String(agenteEncontrado.idAgente || '').trim();
+            const resolvedAgentName = String(agenteEncontrado.nombre || '').trim();
+
+            const needsAgentUpdate =
+              !currentAgentName ||
+              currentAgentName.toLowerCase() === 'sin asignar' ||
+              (resolvedAgentName && currentAgentName.toLowerCase() !== resolvedAgentName.toLowerCase()) ||
+              (currentAgentId && resolvedAgentId && currentAgentId !== resolvedAgentId);
+
+            if (needsAgentUpdate) {
+              casoActualizado = {
+                ...casoActualizado,
+                agentId: resolvedAgentId || casoActualizado.agentId,
+                agentName: resolvedAgentName || casoActualizado.agentName,
+                agenteAsignado: agenteEncontrado,
+              };
+            }
+          }
+        }
+      }
+
+      return casoActualizado;
+    });
+
+    const hasChanges = casosEnriquecidos.some((caso, idx) => {
+      const original = casos[idx];
+      return (
+        caso.clientName !== original.clientName ||
+        caso.clientId !== original.clientId ||
+        caso.cliente?.idCliente !== original.cliente?.idCliente ||
+        caso.category !== original.category ||
+        caso.categoria?.idCategoria !== original.categoria?.idCategoria ||
+        caso.agentName !== original.agentName ||
+        caso.agenteAsignado?.idAgente !== original.agenteAsignado?.idAgente
+      );
+    });
+
+    if (hasChanges) {
+      setCasos(casosEnriquecidos);
+    }
+  }, [casos, clientes, categorias, agentes]);
+
+  const loadClientes = async () => {
+    try {
+      const data = await api.getClientes();
+      setClientes(data);
+      return data;
+    } catch (err) {
+      return [];
+    }
+  };
+
+  const loadCategorias = async () => {
+    try {
+      const data = await api.getCategorias();
+      setCategorias(data);
+      return data;
+    } catch (err) {
+      return [];
+    }
+  };
+
+  const loadAgentes = async () => {
+    try {
+      const data = await api.getAgentes();
+      setAgentes(data);
+      return data;
+    } catch (err) {
+      return [];
+    }
+  };
+
+  const loadCasos = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getCases();
+      setCasos(data);
+      const updateTime = new Date();
+      localStorage.setItem('bandeja_last_update', updateTime.toISOString());
+      return data;
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar los casos desde el servidor.');
+      setCasos([]);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Aplicar todos los filtros
+  useEffect(() => {
+    const term = searchTerm.toLowerCase();
+    let result = casos.filter(c => {
+      const id = (c.id || c.ticketNumber || '').toLowerCase();
+      const client = (c.clientName || '').toLowerCase();
+      const subject = (c.subject || '').toLowerCase();
+      const agent = getCaseAgentId(c).toLowerCase();
+      
+      return id.includes(term) || client.includes(term) || subject.includes(term) || agent.includes(term);
+    });
+
+    // Filtro por estado
+    if (statusFilter !== 'all') {
+      result = result.filter(c => {
+        return getCaseStatusKey(c) === statusFilter;
+      });
+    }
+
+    // Filtro por categorÃ­a
+    if (categoriaFilter !== 'all') {
+      result = result.filter(c => {
+        return getCaseCategoryInfo(c).key === categoriaFilter;
+      });
+    }
+
+    // Filtro por cliente
+    if (clienteFilter !== 'all') {
+      result = result.filter(c => {
+        return getCaseClientInfo(c).id === String(clienteFilter);
+      });
+    }
+
+    // Filtro por agente
+    if (agenteFilter !== 'all') {
+      result = result.filter(c => {
+        return getCaseAgentId(c) === String(agenteFilter);
+      });
+    }
+
+    // Filtro por SLA
+    if (slaFilter !== 'all') {
+      result = result.filter(c => {
+        const currentSlaLabel = getSlaStatus(c).label;
+        if (slaFilter === 'vencido') {
+          return currentSlaLabel === 'Vencido';
+        } else if (slaFilter === 'en-riesgo') {
+          return currentSlaLabel === 'Crítico' || currentSlaLabel === 'Alto';
+        } else if (slaFilter === 'dentro-sla') {
+          return currentSlaLabel === 'Normal';
+        }
+        return true;
+      });
+    }
+
+    // Filtro por fecha
+    if (fechaFilter !== 'all') {
+      const now = new Date();
+      let startDate = new Date();
+      
+      if (fechaFilter === 'hoy') {
+        startDate = new Date(now.setHours(0, 0, 0, 0));
+      } else if (fechaFilter === 'semana') {
+        const dayOfWeek = now.getDay();
+        startDate = new Date(now.setDate(now.getDate() - dayOfWeek));
+        startDate.setHours(0, 0, 0, 0);
+      } else if (fechaFilter === 'mes') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      }
+      
+      result = result.filter(c => new Date(c.createdAt) >= startDate);
+    }
+
+    setFiltered(result);
+  }, [searchTerm, statusFilter, categoriaFilter, clienteFilter, agenteFilter, slaFilter, fechaFilter, casos]);
+
+  // Estilos dinÃ¡micos basados en el tema (usando useMemo para recalcular cuando cambia el tema)
+  const styles = useMemo(() => ({
+    container: {
+      backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff',
+      minHeight: '100vh'
+    },
+    card: {
+      backgroundColor: theme === 'dark' ? '#020617' : '#ffffff',
+      borderColor: theme === 'dark' ? 'rgba(148, 163, 184, 0.2)' : 'rgba(148, 163, 184, 0.2)',
+      color: theme === 'dark' ? '#f1f5f9' : '#0f172a'
+    },
+    text: {
+      primary: theme === 'dark' ? '#f1f5f9' : '#0f172a',
+      secondary: theme === 'dark' ? '#cbd5e1' : '#475569',
+      tertiary: theme === 'dark' ? '#94a3b8' : '#64748b'
+    },
+    input: {
+      backgroundColor: theme === 'dark' ? '#020617' : '#f8fafc',
+      borderColor: theme === 'dark' ? 'rgba(148, 163, 184, 0.3)' : 'rgba(148, 163, 184, 0.2)',
+      color: theme === 'dark' ? '#f1f5f9' : '#0f172a'
+    }
+  }), [theme]);
+
+  const getSlaStatus = (caso: Case) => {
+    const slaDias = caso.categoria?.slaDias || 5;
+    const diasRestantes = slaDias - caso.diasAbierto;
+    
+    if (caso.diasAbierto >= slaDias) {
+      return { label: 'Vencido', color: '#dc2626', bg: 'rgba(220, 38, 38, 0.1)', icon: Timer };
+    } else if (diasRestantes <= 1 && caso.diasAbierto > 0) {
+      return { label: 'CrÃ­tico', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', icon: AlertTriangle };
+    } else if (diasRestantes <= 3) {
+      return { label: 'Alto', color: '#64748b', bg: 'rgba(100, 116, 139, 0.1)', icon: Clock };
+    }
+    return { label: 'Normal', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.1)', icon: Clock };
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  // Badges con color (como en Admin de usuarios)
+  const getStatusBadgeStyle = (status: CaseStatus): { bg: string; text: string; border: string } => {
+    const dark: Record<CaseStatus, { bg: string; text: string; border: string }> = {
+      [CaseStatus.NUEVO]: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6', border: 'rgba(59, 130, 246, 0.3)' },
+      [CaseStatus.EN_PROCESO]: { bg: 'rgba(245, 158, 11, 0.15)', text: '#f59e0b', border: 'rgba(245, 158, 11, 0.3)' },
+      [CaseStatus.PENDIENTE_CLIENTE]: { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7', border: 'rgba(168, 85, 247, 0.3)' },
+      [CaseStatus.ESCALADO]: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444', border: 'rgba(239, 68, 68, 0.3)' },
+      [CaseStatus.RESUELTO]: { bg: 'rgba(34, 197, 94, 0.15)', text: '#22c55e', border: 'rgba(34, 197, 94, 0.3)' },
+      [CaseStatus.CERRADO]: { bg: 'rgba(148, 163, 184, 0.15)', text: '#94a3b8', border: 'rgba(148, 163, 184, 0.3)' }
+    };
+    const light: Record<CaseStatus, { bg: string; text: string; border: string }> = {
+      [CaseStatus.NUEVO]: { bg: '#dbeafe', text: '#1e40af', border: '#3b82f6' },
+      [CaseStatus.EN_PROCESO]: { bg: '#fef3c7', text: '#92400e', border: '#f59e0b' },
+      [CaseStatus.PENDIENTE_CLIENTE]: { bg: '#f3e8ff', text: '#6b21a8', border: '#a855f7' },
+      [CaseStatus.ESCALADO]: { bg: '#fee2e2', text: '#991b1b', border: '#ef4444' },
+      [CaseStatus.RESUELTO]: { bg: '#d1fae5', text: '#065f46', border: '#10b981' },
+      [CaseStatus.CERRADO]: { bg: '#f1f5f9', text: '#334155', border: '#64748b' }
+    };
+    const style = theme === 'dark' ? dark[status] : light[status];
+    return style || (theme === 'dark' ? { bg: 'rgba(148, 163, 184, 0.15)', text: '#94a3b8', border: 'rgba(148, 163, 184, 0.3)' } : { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' });
+  };
+  const getEmpresaBadgeStyle = (paisCode: string): { bg: string; text: string; border: string } => {
+    if (paisCode === 'SV') return theme === 'dark' ? { bg: 'rgba(59, 130, 246, 0.15)', text: '#60a5fa', border: 'rgba(59, 130, 246, 0.3)' } : { bg: '#dbeafe', text: '#1d4ed8', border: '#3b82f6' };
+    if (paisCode === 'GT') return theme === 'dark' ? { bg: 'rgba(34, 197, 94, 0.15)', text: '#4ade80', border: 'rgba(34, 197, 94, 0.3)' } : { bg: '#dcfce7', text: '#166534', border: '#22c55e' };
+    return theme === 'dark' ? { bg: 'rgba(148, 163, 184, 0.15)', text: '#94a3b8', border: 'rgba(148, 163, 184, 0.3)' } : { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' };
+  };
+  const getCategoriaBadgeStyle = (): { bg: string; text: string; border: string } => {
+    return theme === 'dark' ? { bg: 'rgba(100, 116, 139, 0.15)', text: '#94a3b8', border: 'rgba(148, 163, 184, 0.3)' } : { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1' };
+  };
+
+  return (
+    <div className="space-y-6" style={styles.container}>
+      {/* Barra de bÃºsqueda y filtros */}
+      <div 
+        className="flex flex-col gap-4 p-4 rounded-xl border flex-shrink-0 flex flex-col gap-3"
+        style={{
+          ...styles.card,
+          animation: 'fadeInSlide 0.3s ease-out'
+        }}
+      >
+        {/* BÃºsqueda */}
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none" style={{color: styles.text.tertiary}} />
+          <input
+            type="text"
+            placeholder="Buscar por ID, Cliente, Asunto o Agente..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-14 pr-5 py-3 border rounded-2xl focus:outline-none focus:ring-4 transition-all text-xs font-medium shadow-sm hover:shadow-md"
+            style={{
+              ...styles.input,
+              '--tw-ring-color': 'var(--color-accent-blue)',
+              '--tw-ring-opacity': '0.2'
+            } as React.CSSProperties & { '--tw-ring-color': string, '--tw-ring-opacity': string }}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'var(--color-accent-blue)';
+              e.target.style.boxShadow = '0 0 0 4px rgba(16, 122, 180, 0.15)';
+              e.target.style.backgroundColor = theme === 'dark' ? '#020617' : '#ffffff';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = styles.input.borderColor;
+              e.target.style.boxShadow = '';
+              e.target.style.backgroundColor = styles.input.backgroundColor;
+            }}
+          />
+        </div>
+
+        {/* Filtros en grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+          {/* Estado */}
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none z-10" style={{color: statusFilter === 'all' ? '#64748b' : '#107ab4'}} />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full pl-10 pr-8 py-2.5 border rounded-xl focus:outline-none transition-all text-xs font-semibold appearance-none cursor-pointer"
+              style={{
+                backgroundColor: statusFilter === 'all' 
+                  ? (theme === 'dark' ? '#020617' : '#ffffff')
+                  : (theme === 'dark' ? 'rgba(16, 122, 180, 0.15)' : '#e0f2fe'),
+                borderColor: statusFilter === 'all' 
+                  ? styles.card.borderColor
+                  : '#107ab4',
+                color: statusFilter === 'all' 
+                  ? styles.text.secondary
+                  : (theme === 'dark' ? '#93c5fd' : '#0c4a6e'),
+                boxShadow: statusFilter === 'all' ? '0 1px 2px rgba(0, 0, 0, 0.05)' : '0 2px 4px rgba(16, 122, 180, 0.15)'
+              }}
+            >
+              <option value="all">Todos los Estados</option>
+              {statusOptions.map((status) => (
+                <option key={status.key} value={status.key}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{
+              color: statusFilter === 'all' ? styles.text.tertiary : '#107ab4',
+              transform: 'rotate(90deg)'
+            }} />
+          </div>
+
+          {/* CategorÃ­a */}
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none z-10" style={{color: categoriaFilter === 'all' ? '#64748b' : '#107ab4'}} />
+            <select
+              value={categoriaFilter}
+              onChange={(e) => setCategoriaFilter(e.target.value)}
+              className="w-full pl-10 pr-8 py-2.5 border rounded-xl focus:outline-none transition-all text-xs font-semibold appearance-none cursor-pointer"
+              style={{
+                backgroundColor: categoriaFilter === 'all' 
+                  ? (theme === 'dark' ? '#020617' : '#ffffff')
+                  : (theme === 'dark' ? 'rgba(16, 122, 180, 0.15)' : '#e0f2fe'),
+                borderColor: categoriaFilter === 'all' 
+                  ? styles.card.borderColor
+                  : '#107ab4',
+                color: categoriaFilter === 'all' 
+                  ? styles.text.secondary
+                  : (theme === 'dark' ? '#93c5fd' : '#0c4a6e'),
+                boxShadow: categoriaFilter === 'all' ? '0 1px 2px rgba(0, 0, 0, 0.05)' : '0 2px 4px rgba(16, 122, 180, 0.15)'
+              }}
+            >
+              <option value="all">Todas las CategorÃ­as</option>
+              {categoryOptions.map((cat) => (
+                <option key={cat.key} value={cat.key}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{
+              color: categoriaFilter === 'all' ? styles.text.tertiary : '#107ab4',
+              transform: 'rotate(90deg)'
+            }} />
+            {categoriaFilter !== 'all' && (() => {
+              const categoriaSeleccionada = categorias.find(c => `id:${String(c.idCategoria)}` === String(categoriaFilter));
+              return categoriaSeleccionada && (categoriaSeleccionada.descripcion || (categoriaSeleccionada as any).description) ? (
+                <div className="absolute right-10 top-1/2 -translate-y-1/2 group">
+                  <HelpCircle 
+                    className="w-3.5 h-3.5 cursor-help transition-colors flex-shrink-0" 
+                    style={{ color: styles.text.tertiary }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = theme === 'dark' ? '#94a3b8' : '#64748b';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = styles.text.tertiary;
+                    }}
+                  />
+                  <div 
+                    className="absolute left-full ml-2 px-3 py-2 rounded-lg text-xs font-medium whitespace-normal opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] pointer-events-none"
+                    style={{
+                      backgroundColor: theme === 'dark' ? '#020617' : '#0f172a',
+                      color: theme === 'dark' ? '#f1f5f9' : '#ffffff',
+                      border: `1px solid ${theme === 'dark' ? 'rgba(148, 163, 184, 0.3)' : 'rgba(148, 163, 184, 0.4)'}`,
+                      boxShadow: theme === 'dark' 
+                        ? '0 4px 12px rgba(0, 0, 0, 0.5)' 
+                        : '0 4px 12px rgba(0, 0, 0, 0.3)',
+                      width: 'max-content',
+                      maxWidth: '300px',
+                      top: '50%',
+                      transform: 'translateY(-50%)'
+                    }}
+                  >
+                    {categoriaSeleccionada.descripcion || (categoriaSeleccionada as any).description || 'Sin descripciÃ³n disponible'}
+                    <div 
+                      className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0"
+                      style={{
+                        borderTop: '4px solid transparent',
+                        borderBottom: '4px solid transparent',
+                        borderRight: `4px solid ${theme === 'dark' ? '#020617' : '#0f172a'}`
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : null;
+            })()}
+          </div>
+
+          {/* Cliente */}
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none z-10" style={{color: clienteFilter === 'all' ? '#64748b' : '#107ab4'}} />
+            <select
+              value={clienteFilter}
+              onChange={(e) => setClienteFilter(e.target.value)}
+              className="w-full pl-10 pr-8 py-2.5 border rounded-xl focus:outline-none transition-all text-xs font-semibold appearance-none cursor-pointer"
+              style={{
+                backgroundColor: clienteFilter === 'all' 
+                  ? styles.card.backgroundColor
+                  : (theme === 'dark' ? 'rgba(16, 122, 180, 0.15)' : '#e0f2fe'),
+                borderColor: clienteFilter === 'all' 
+                  ? styles.card.borderColor
+                  : '#107ab4',
+                color: clienteFilter === 'all' 
+                  ? styles.text.secondary
+                  : (theme === 'dark' ? '#93c5fd' : '#0c4a6e'),
+                boxShadow: clienteFilter === 'all' ? '0 1px 2px rgba(0, 0, 0, 0.05)' : '0 2px 4px rgba(16, 122, 180, 0.15)'
+              }}
+            >
+              <option value="all">Todos los Clientes</option>
+              {clientOptions.map((cli) => (
+                <option key={cli.id} value={cli.id}>
+                  {cli.label}
+                </option>
+              ))}
+            </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{
+              color: clienteFilter === 'all' ? styles.text.tertiary : '#107ab4',
+              transform: 'rotate(90deg)'
+            }} />
+          </div>
+
+          {/* Agente */}
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none z-10" style={{color: agenteFilter === 'all' ? '#64748b' : '#107ab4'}} />
+            <select
+              value={agenteFilter}
+              onChange={(e) => setAgenteFilter(e.target.value)}
+              className="w-full pl-10 pr-8 py-2.5 border rounded-xl focus:outline-none transition-all text-xs font-semibold appearance-none cursor-pointer"
+              style={{
+                backgroundColor: agenteFilter === 'all' 
+                  ? styles.card.backgroundColor
+                  : (theme === 'dark' ? 'rgba(16, 122, 180, 0.15)' : '#e0f2fe'),
+                borderColor: agenteFilter === 'all' 
+                  ? styles.card.borderColor
+                  : '#107ab4',
+                color: agenteFilter === 'all' 
+                  ? styles.text.secondary
+                  : (theme === 'dark' ? '#93c5fd' : '#0c4a6e'),
+                boxShadow: agenteFilter === 'all' ? '0 1px 2px rgba(0, 0, 0, 0.05)' : '0 2px 4px rgba(16, 122, 180, 0.15)'
+              }}
+            >
+              <option value="all">Todos los Agentes</option>
+              {agentOptions.map((agentId) => (
+                <option key={agentId} value={agentId}>
+                  {agentId}
+                </option>
+              ))}
+            </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{
+              color: agenteFilter === 'all' ? styles.text.tertiary : '#107ab4',
+              transform: 'rotate(90deg)'
+            }} />
+          </div>
+
+          {/* SLA */}
+          <div className="relative">
+            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none z-10" style={{color: slaFilter === 'all' ? '#64748b' : '#107ab4'}} />
+            <select
+              value={slaFilter}
+              onChange={(e) => setSlaFilter(e.target.value)}
+              className="w-full pl-10 pr-8 py-2.5 border rounded-xl focus:outline-none transition-all text-xs font-semibold appearance-none cursor-pointer"
+              style={{
+                backgroundColor: slaFilter === 'all' 
+                  ? styles.card.backgroundColor
+                  : (theme === 'dark' ? 'rgba(16, 122, 180, 0.15)' : '#e0f2fe'),
+                borderColor: slaFilter === 'all' 
+                  ? styles.card.borderColor
+                  : '#107ab4',
+                color: slaFilter === 'all' 
+                  ? styles.text.secondary
+                  : (theme === 'dark' ? '#93c5fd' : '#0c4a6e'),
+                boxShadow: slaFilter === 'all' ? '0 1px 2px rgba(0, 0, 0, 0.05)' : '0 2px 4px rgba(16, 122, 180, 0.15)'
+              }}
+            >
+              <option value="all">Todos los SLA</option>
+              <option value="vencido">Vencido</option>
+              <option value="en-riesgo">En Riesgo</option>
+              <option value="dentro-sla">Dentro de SLA</option>
+            </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{
+              color: slaFilter === 'all' ? styles.text.tertiary : '#107ab4',
+              transform: 'rotate(90deg)'
+            }} />
+          </div>
+
+          {/* Fecha */}
+          <div className="relative">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none z-10" style={{color: fechaFilter === 'all' ? '#64748b' : '#107ab4'}} />
+            <select
+              value={fechaFilter}
+              onChange={(e) => setFechaFilter(e.target.value)}
+              className="w-full pl-10 pr-8 py-2.5 border rounded-xl focus:outline-none transition-all text-xs font-semibold appearance-none cursor-pointer"
+              style={{
+                backgroundColor: fechaFilter === 'all' 
+                  ? styles.card.backgroundColor
+                  : (theme === 'dark' ? 'rgba(16, 122, 180, 0.15)' : '#e0f2fe'),
+                borderColor: fechaFilter === 'all' 
+                  ? styles.card.borderColor
+                  : '#107ab4',
+                color: fechaFilter === 'all' 
+                  ? styles.text.secondary
+                  : (theme === 'dark' ? '#93c5fd' : '#0c4a6e'),
+                boxShadow: fechaFilter === 'all' ? '0 1px 2px rgba(0, 0, 0, 0.05)' : '0 2px 4px rgba(16, 122, 180, 0.15)'
+              }}
+            >
+              <option value="all">Todas las Fechas</option>
+              <option value="hoy">Hoy</option>
+              <option value="semana">Esta Semana</option>
+              <option value="mes">Este Mes</option>
+            </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{
+              color: fechaFilter === 'all' ? styles.text.tertiary : '#107ab4',
+              transform: 'rotate(90deg)'
+            }} />
+          </div>
+
+          {/* BotÃ³n Nuevo Caso */}
+          {canCreateCase && (
+            <button 
+              onClick={() => navigate('/app/casos/nuevo')}
+              className="text-white px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1"
+              style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))'}}
+            >
+              <Plus className="w-5 h-5" /> Nuevo
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Tabla de casos */}
+      {loading ? (
+        <LoadingScreen message="Cargando casos..." />
+      ) : error ? (
+        <div className="rounded-xl border p-12 text-center" style={{
+          ...styles.card,
+          borderColor: 'rgba(200, 21, 27, 0.3)'
+        }}>
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{backgroundColor: 'rgba(200, 21, 27, 0.2)'}}>
+            <X className="w-10 h-10" style={{color: '#f87171'}} />
+          </div>
+          <h3 className="text-base font-bold mb-2" style={{color: styles.text.primary}}>Error al cargar casos</h3>
+          <p className="text-sm mb-4" style={{color: '#ef4444'}}>{error}</p>
+          <button
+            onClick={loadCasos}
+            className="px-6 py-2 rounded-lg font-semibold transition-colors"
+            style={{background: 'linear-gradient(135deg, var(--color-brand-red), var(--color-accent-red))', color: '#ffffff'}}
+          >
+            Reintentar
+          </button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-xl border p-12 text-center" style={{...styles.card}}>
+          <div className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg" style={{
+            backgroundColor: theme === 'dark' ? '#0f172a' : '#f8fafc'
+          }}>
+            <Search className="w-12 h-12" style={{color: styles.text.tertiary}} />
+          </div>
+          <h3 className="text-base font-bold mb-2" style={{color: styles.text.primary}}>No se encontraron casos</h3>
+          <p className="text-sm font-medium" style={{color: styles.text.secondary}}>
+            {casos.length === 0 
+              ? 'No hay casos registrados en el sistema'
+              : 'Intenta ajustar los filtros de bÃºsqueda'}
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-xl border overflow-hidden" style={{...styles.card, animation: 'fadeInSlide 0.3s ease-out 0.1s both'}}>
+          <div className="overflow-x-auto">
+            <table className="w-full" style={{borderCollapse: 'separate', borderSpacing: 0}}>
+              <thead>
+                <tr style={{
+                  backgroundColor: theme === 'dark' ? '#0f172a' : '#f8fafc',
+                  animation: 'fadeInSlide 0.3s ease-out'
+                }}>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{color: styles.text.secondary, borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>ID Caso</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{color: styles.text.secondary, borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>Cliente</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{color: styles.text.secondary, borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>Empresa</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{color: styles.text.secondary, borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>Asunto</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{color: styles.text.secondary, borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>CategorÃ­a</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{color: styles.text.secondary, borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>Estado</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{color: styles.text.secondary, borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>Agente</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{color: styles.text.secondary, borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>SLA</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{color: styles.text.secondary, borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>DÃ­as</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style={{color: styles.text.secondary, borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>Fecha</th>
+                  <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider" style={{color: styles.text.secondary, borderBottom: '1px solid rgba(148, 163, 184, 0.2)'}}>AcciÃ³n</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((caso, idx) => {
+                  const rawStatus = caso.status || (caso as any).estado;
+                  const normalizedStatus = normalizeStatus(rawStatus);
+                  const slaStatus = getSlaStatus(caso);
+                  const StatusIcon = slaStatus.icon;
+                  
+                  return (
+                    <tr 
+                      key={caso.id} 
+                      className="hover:opacity-90 transition-opacity cursor-pointer"
+                      style={{
+                        backgroundColor: idx % 2 === 0 
+                          ? (theme === 'dark' ? '#020617' : '#ffffff')
+                          : (theme === 'dark' ? '#0f172a' : '#f8fafc'),
+                        borderBottom: idx < filtered.length - 1 ? '1px solid rgba(148, 163, 184, 0.1)' : 'none',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateX(2px)';
+                        e.currentTarget.style.transition = 'transform 0.2s ease-in-out';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }} 
+                      onClick={() => navigate(`/app/casos/${caso.id}`)}
+                    >
+                      <td className="px-4 py-3">
+                        <span className="text-xs font-bold transition-colors" style={{color: styles.text.primary}}>
+                          {caso.ticketNumber || (caso as any).idCaso || caso.id}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex px-2 py-1 text-[10px] font-semibold rounded-lg border transition-all" style={{
+                            backgroundColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.12)' : '#dbeafe',
+                            color: theme === 'dark' ? '#60a5fa' : '#1d4ed8',
+                            borderColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.3)' : '#93c5fd'
+                          }}>
+                            {caso.clientId || caso.cliente?.idCliente || 'N/A'}
+                          </span>
+                          <span className="text-xs font-semibold max-w-[150px] truncate" style={{color: styles.text.primary}}>
+                            {caso.clientName || caso.cliente?.nombreEmpresa || 'Por definir'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const paisCode = getCaseCountry(caso);
+                          if (!paisCode || paisCode === 'N/A') return <span className="text-xs" style={{color: styles.text.tertiary}}>N/A</span>;
+                          const empresaStyle = getEmpresaBadgeStyle(paisCode);
+                          return (
+                            <span className="inline-flex items-center justify-center px-2 py-1 text-[10px] font-semibold rounded-lg border transition-all" style={{ backgroundColor: empresaStyle.bg, color: empresaStyle.text, borderColor: empresaStyle.border, minWidth: '32px' }}>
+                              {paisCode}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs font-medium max-w-[200px] truncate block" style={{color: styles.text.primary}}>
+                          {caso.subject}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="inline-flex items-center gap-1.5">
+                          {(() => {
+                            const catStyle = getCategoriaBadgeStyle();
+                            return (
+                              <span className="inline-flex items-center px-2 py-1 text-[10px] font-semibold rounded-lg border transition-all" style={{ backgroundColor: catStyle.bg, color: catStyle.text, borderColor: catStyle.border }}>
+                                {caso.category || caso.categoria?.nombre || 'General'}
+                              </span>
+                            );
+                          })()}
+                          {caso.categoria && (caso.categoria.descripcion || (caso.categoria as any).description) && (
+                            <div className="relative group">
+                              <HelpCircle 
+                                className="w-3.5 h-3.5 cursor-help transition-colors flex-shrink-0" 
+                                style={{ color: styles.text.tertiary }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = theme === 'dark' ? '#94a3b8' : '#64748b';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = styles.text.tertiary;
+                                }}
+                              />
+                              <div 
+                                className="absolute left-full ml-2 px-3 py-2 rounded-lg text-xs font-medium whitespace-normal opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] pointer-events-none"
+                                style={{
+                                  backgroundColor: theme === 'dark' ? '#020617' : '#0f172a',
+                                  color: theme === 'dark' ? '#f1f5f9' : '#ffffff',
+                                  border: `1px solid ${theme === 'dark' ? 'rgba(148, 163, 184, 0.3)' : 'rgba(148, 163, 184, 0.4)'}`,
+                                  boxShadow: theme === 'dark' 
+                                    ? '0 4px 12px rgba(0, 0, 0, 0.5)' 
+                                    : '0 4px 12px rgba(0, 0, 0, 0.3)',
+                                  width: 'max-content',
+                                  maxWidth: '300px',
+                                  top: '50%',
+                                  transform: 'translateY(-50%)'
+                                }}
+                              >
+                                {caso.categoria.descripcion || (caso.categoria as any).description || 'Sin descripciÃ³n disponible'}
+                                <div 
+                                  className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0"
+                                  style={{
+                                    borderTop: '4px solid transparent',
+                                    borderBottom: '4px solid transparent',
+                                    borderRight: `4px solid ${theme === 'dark' ? '#020617' : '#0f172a'}`
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const badgeStyle = getStatusBadgeStyle(normalizedStatus);
+                          return (
+                            <span className="inline-flex px-2 py-1 text-[10px] font-semibold rounded-lg border transition-all uppercase tracking-wide" style={{ backgroundColor: badgeStyle.bg, color: badgeStyle.text, borderColor: badgeStyle.border }}>
+                              {rawStatus}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs font-medium" style={{color: styles.text.secondary}}>
+                          {getCaseAgentId(caso) || 'Sin asignar'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <StatusIcon className="w-3.5 h-3.5" style={{color: slaStatus.color}} />
+                          <span 
+                            className="text-[10px] font-semibold"
+                            style={{
+                              color: slaStatus.color
+                            }}
+                          >
+                            {slaStatus.label}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs font-semibold" style={{color: styles.text.secondary}}>
+                          {caso.diasAbierto || 0} dÃ­as
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs font-medium" style={{color: styles.text.tertiary}}>
+                          {formatDate(caso.createdAt)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end">
+                          <div className="p-2 rounded-lg transition-all" style={{
+                            backgroundColor: 'transparent'
+                          }}>
+                            <ChevronRight className="w-5 h-5 transition-all" style={{color: styles.text.tertiary}} onMouseEnter={(e) => { e.currentTarget.style.color = styles.text.secondary; e.currentTarget.style.transform = 'translateX(4px)'; }} onMouseLeave={(e) => { e.currentTarget.style.color = styles.text.tertiary; e.currentTarget.style.transform = ''; }} />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminBandejaCasos;
+
+
+
+

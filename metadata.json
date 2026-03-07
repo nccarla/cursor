@@ -1,0 +1,5 @@
+
+{
+  "name": "INTELFON – Sistema de Gestión de Casos SAC",
+  "description": "Sistema avanzado de gestión de tickets SAC con flujos de estados controlados, asignación round-robin y paneles especializados por rol (Agente, Supervisor, Gerente) integrado con n8n."
+}

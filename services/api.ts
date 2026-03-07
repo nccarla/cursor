@@ -1,0 +1,2800 @@
+
+import { Case, CaseStatus, KPI, User, Role, Cliente, Categoria } from '../types';
+import { MOCK_CASOS, MOCK_AGENTES, MOCK_USERS, MOCK_CLIENTES, MOCK_CATEGORIAS } from './mockData';
+import { API_CONFIG, CASES_WEBHOOK_URL, CLIENTS_WEBHOOK_URL } from '../config';
+import { emailService } from './emailService';
+import * as caseService from './caseService';
+
+// Sistema de caché simple para evitar llamadas redundantes
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+  promise?: Promise<any>;
+}
+
+const CACHE_DURATION = 0; // Sin caché para agentes (siempre recalcular round robin)
+const cache: {
+  cases?: CacheEntry;
+  clientes?: CacheEntry;
+  agentes?: CacheEntry;
+  usuarios?: CacheEntry;
+} = {};
+
+// Helper para obtener datos del caché o hacer la llamada
+const getCachedOrFetch = async <T>(
+  key: 'cases' | 'clientes' | 'agentes' | 'usuarios',
+  fetchFn: () => Promise<T>,
+  maxAge: number = CACHE_DURATION
+): Promise<T> => {
+  const now = Date.now();
+  const cached = cache[key];
+  
+  // Si hay datos en caché y no han expirado, retornarlos
+  if (cached && cached.data && (now - cached.timestamp) < maxAge) {
+    return cached.data as T;
+  }
+  
+  // Si ya hay una petición en curso, esperar a que termine
+  if (cached?.promise) {
+    return await cached.promise as T;
+  }
+  
+  // Hacer nueva petición
+  const promise = fetchFn();
+  cache[key] = {
+    data: null,
+    timestamp: now,
+    promise
+  };
+  
+  try {
+    const data = await promise;
+    if (cache[key]) {
+      cache[key] = {
+        data,
+        timestamp: now
+      };
+    }
+    return data;
+  } catch (error) {
+    // Si falla, limpiar el caché para permitir reintentos
+    delete cache[key];
+    throw error;
+  }
+};
+
+// Limpiar caché manualmente
+const clearCache = (key?: 'cases' | 'clientes' | 'agentes' | 'usuarios') => {
+  if (key) {
+    delete cache[key];
+  } else {
+    Object.keys(cache).forEach(k => delete cache[k as keyof typeof cache]);
+  }
+};
+
+// Inicializar datos en localStorage si no existen
+const initStorage = () => {
+  if (!localStorage.getItem('intelfon_cases')) {
+    localStorage.setItem('intelfon_cases', JSON.stringify(MOCK_CASOS));
+  }
+  if (!localStorage.getItem('intelfon_agents')) {
+    localStorage.setItem('intelfon_agents', JSON.stringify(MOCK_AGENTES));
+  }
+};
+
+// Helper genérico para llamadas a webhooks de n8n
+// Usa el JWT almacenado (cuando exista) y respeta el timeout global
+const callWebhookGeneric = async <T = any>(
+  url: string,
+  method: 'GET' | 'POST',
+  body?: unknown
+): Promise<T> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+  const token = localStorage.getItem('intelfon_token');
+
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+  };
+
+  if (body) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    if (body) {
+      const bodyString = JSON.stringify(body);
+    }
+    
+    const startTime = Date.now();
+    const response = await fetch(url, {
+      method,
+      mode: 'cors',
+      credentials: 'omit',
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    const duration = Date.now() - startTime;
+
+    if (!response.ok) {
+      // Intentar extraer mensaje de error del backend
+      let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      let errorBody = null;
+      try {
+        const text = await response.text();
+        try {
+          errorBody = JSON.parse(text);
+          if (errorBody?.message) {
+            errorMessage = errorBody.message;
+          }
+        } catch {
+          // No es JSON, usar el texto
+          errorMessage = text || errorMessage;
+        }
+      } catch {
+        // ignorar error de parseo
+      }
+      throw new Error(errorMessage);
+    }
+
+    // Algunos flujos podrían responder 204 sin cuerpo
+    if (response.status === 204) {
+      return undefined as unknown as T;
+    }
+
+    const text = await response.text();
+    
+    let data: T;
+    try {
+      data = JSON.parse(text) as T;
+    } catch (parseError) {
+      data = text as unknown as T;
+    }
+    
+    return data;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('Timeout al comunicarse con el backend (n8n).');
+    }
+    // Re-lanzamos para que la capa superior pueda hacer fallback a mock/localStorage
+    throw error;
+  }
+};
+
+// Helper para llamadas al webhook de casos en n8n
+const callCasesWebhook = async <T = any>(
+  method: 'GET' | 'POST',
+  body?: unknown
+): Promise<T> => {
+  if (body) {
+  }
+  
+  try {
+    const result = await callWebhookGeneric<T>(CASES_WEBHOOK_URL, method, body);
+    return result;
+  } catch (error: any) {
+    if (error?.response) {
+    }
+    throw error;
+  }
+};
+
+// Helper para llamadas al webhook de clientes en n8n
+const callClientsWebhook = async <T = any>(
+  method: 'GET' | 'POST',
+  body?: unknown
+): Promise<T> => {
+  return callWebhookGeneric<T>(CLIENTS_WEBHOOK_URL, method, body);
+};
+
+// Helper para llamadas al webhook de categorías en n8n
+const callCategoriesWebhook = async <T = any>(
+  method: 'GET' | 'POST',
+  body?: unknown
+): Promise<T> => {
+  // Usar la URL completa del webhook de categorías o la URL relativa en desarrollo
+  const CATEGORIES_WEBHOOK_URL = (import.meta.env as any).VITE_WEBHOOK_CATEGORIAS_URL 
+    || API_CONFIG.WEBHOOK_CATEGORIAS_URL_FULL 
+    || API_CONFIG.WEBHOOK_CATEGORIAS_URL 
+    || '/api/categorias';
+  return callWebhookGeneric<T>(CATEGORIES_WEBHOOK_URL, method, body);
+};
+
+// Helper para llamar al webhook de estados
+const callEstadosWebhook = async <T = any>(
+  method: 'GET' | 'POST',
+  body?: unknown
+): Promise<T> => {
+  // URL del webhook de estados
+  const ESTADOS_WEBHOOK_URL = 'https://n8n.red.com.sv/webhook/5009ec05-e3ce-44ef-bd68-ae7ef4e61f61';
+  try {
+    const response = await callWebhookGeneric<T>(ESTADOS_WEBHOOK_URL, method, body);
+    return response;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+// Helper para llamar al webhook de asuetos
+const callAsuetosWebhook = async <T = any>(
+  method: 'GET' | 'POST',
+  body?: unknown
+): Promise<T> => {
+  // URL del webhook de asuetos
+  const ASUETOS_WEBHOOK_URL = 'https://n8n.red.com.sv/webhook/d80b6b0a-b647-475e-8795-c8747a9b72d8';
+  try {
+    const response = await callWebhookGeneric<T>(ASUETOS_WEBHOOK_URL, method, body);
+    return response;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+// Helpers para construir el payload estándar esperado por n8n
+const buildActorPayload = (user: User | null) => {
+  if (!user) {
+    throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+  }
+
+  const rawUserId = (user as any).user_id ?? user.id ?? '';
+  const userId = String(rawUserId).trim();
+  const userEmail = sessionStorage.getItem('intelfon_user_email') || (user as any).email;
+
+  if (!userEmail) {
+    throw new Error('Usuario sin email. Por favor, inicia sesión nuevamente.');
+  }
+
+  return {
+    user_id: userId,
+    email: userEmail,
+    role: user.role,
+  };
+};
+
+const DEFAULT_CATEGORY = {
+  categoria_id: 7, // "Otros" - categoría por defecto para casos sin categoría específica
+  nombre: 'Otros',
+};
+
+
+// Función auxiliar para llamar al webhook de Make.com
+// Solo permite operaciones si el webhook responde correctamente
+// type: 'login' | 'forgot_password' | 'register'
+const callWebhook = async (scenario: 'login' | 'reset_password' | 'new_account', data: any) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+  // Mapear scenario a type para Make.com
+  const typeMap: Record<'login' | 'reset_password' | 'new_account', string> = {
+    'login': 'login',
+    'reset_password': 'forgot_password',
+    'new_account': 'register'
+  };
+
+  const type = typeMap[scenario];
+
+  try {
+    // Intentar la petición con CORS
+    let response: Response;
+    try {
+      response = await fetch(API_CONFIG.WEBHOOK_URL, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          type,
+          ...data,
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchError: any) {
+      // Si hay un error de red o CORS, proporcionar un mensaje más específico
+      if (fetchError.name === 'TypeError' && fetchError.message.includes('fetch')) {
+        throw new Error('Error de conexión: El servidor n8n no está permitiendo peticiones CORS. Contacta al administrador para configurar CORS en el servidor.');
+      }
+      throw fetchError;
+    }
+
+    clearTimeout(timeoutId);
+
+    // Verificar si la respuesta es válida antes de intentar parsear JSON
+    if (!response.ok && response.status === 0) {
+      throw new Error('Error de CORS: El servidor no está permitiendo peticiones desde este origen.');
+    }
+
+    const result = await response.json();
+    
+    // Verificar si hay error en la respuesta (formato de Make.com)
+    if (result.error === true) {
+      throw new Error(result.message || 'Error en la operación');
+    }
+
+    // Si la respuesta no es ok, también tratar como error
+    if (!response.ok) {
+      throw new Error(result.message || `Error ${response.status}: ${response.statusText}`);
+    }
+
+    // Validaciones según el escenario (formato de Make.com)
+    if (scenario === 'login' || scenario === 'new_account') {
+      // Para login y register, Make.com retorna: { id, name, role, email }
+      // NO retorna token ni user anidado
+      if (!result.id || !result.name || !result.role) {
+        throw new Error('Respuesta del webhook inválida. Faltan datos del usuario.');
+      }
+      
+      // Validar que el rol sea válido
+      if (!['AGENTE', 'SUPERVISOR', 'GERENTE', 'ADMIN', 'ADMINISTRADOR'].includes(result.role)) {
+        throw new Error('Rol de usuario inválido. La cuenta debe tener un rol válido asignado.');
+      }
+      
+      // Normalizar la respuesta al formato esperado internamente
+      // IMPORTANTE: Incluir el campo pais/country del webhook si está disponible
+      // Buscar país en todos los campos posibles
+      const paisEncontrado = result.pais || result.country || result.país || result.Pais || result.Country || 
+                             result.PAIS || result.COUNTRY || (result as any).pais_usuario || 
+                             (result as any).country_user || (result as any).user_pais;
+      
+      return {
+        token: `token-${result.id}-${Date.now()}`, // Generar token local basado en el ID
+        user: {
+          id: result.id,
+          name: result.name,
+          role: result.role,
+          email: result.email,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(result.name)}&background=0f172a&color=fff`,
+          pais: paisEncontrado || undefined // Incluir país del webhook desde cualquier campo posible
+        }
+      };
+    } else if (scenario === 'reset_password') {
+      // Para reset password, validar según la acción
+      if (data.action === 'verify_code' && !result.tempToken) {
+        throw new Error('Código de verificación inválido o expirado');
+      }
+      if (result.error === true || result.success === false) {
+        throw new Error(result.message || 'Error en la operación de restablecimiento de contraseña');
+      }
+      return result;
+    }
+    
+    return result;
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('Timeout: El servidor no respondió a tiempo. Verifica tu conexión.');
+    }
+    // Detectar errores específicos de CORS
+    if (error.message && (
+      error.message.includes('CORS') || 
+      error.message.includes('cors') ||
+      error.message.includes('fetch') ||
+      error.message.includes('NetworkError') ||
+      error.name === 'TypeError'
+    )) {
+      // En desarrollo, sugerir usar el proxy
+      const isDevelopment = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      if (isDevelopment) {
+        throw new Error('Error de CORS detectado. El proxy de desarrollo debería manejar esto automáticamente. Verifica la configuración de Vite.');
+      }
+      // En producción, indicar que el servidor necesita configurar CORS
+      throw new Error('Error de CORS: El servidor n8n necesita permitir peticiones desde este dominio. Contacta al administrador para configurar los headers CORS en n8n.');
+    }
+    if (error.message) {
+      throw error;
+    }
+    throw new Error('Error de conexión con el servidor. La cuenta debe estar registrada en el sistema.');
+  }
+};
+
+// Función auxiliar para autenticación con webhook (escenario: login)
+// Solo permite acceso si el webhook de ClickUp valida la cuenta
+const authenticateWithWebhook = async (email: string, password: string): Promise<User> => {
+  const data = await callWebhook('login', { email, password });
+  
+  // El webhook debe retornar: { token: string, user: { id, name, role, avatar? } }
+  // Si no hay token o usuario, significa que la cuenta no está registrada o las credenciales son inválidas
+  if (!data.token || !data.user) {
+    throw new Error('Credenciales inválidas o cuenta no registrada en el sistema');
+  }
+
+  // Validar que el usuario tenga un ID válido
+  if (!data.user.id) {
+    throw new Error('La cuenta no está correctamente registrada en el sistema');
+  }
+
+  // Validar que el token sea una cadena no vacía
+  if (!data.token || typeof data.token !== 'string' || data.token.trim() === '') {
+    throw new Error('Token de autenticación inválido. La cuenta no está correctamente registrada.');
+  }
+
+  // Validar que el usuario tenga nombre válido
+  if (!data.user.name || typeof data.user.name !== 'string' || data.user.name.trim() === '') {
+    throw new Error('Información de usuario incompleta. La cuenta no está correctamente registrada.');
+  }
+
+  // Validar que el rol sea válido y venga del webhook
+  const userRole = data.user.role;
+  if (!userRole || !['AGENTE', 'SUPERVISOR', 'GERENTE', 'ADMIN', 'ADMINISTRADOR'].includes(userRole)) {
+    throw new Error('Rol de usuario inválido. La cuenta debe tener un rol válido asignado.');
+  }
+
+  // Almacenar el token JWT para futuras peticiones
+  localStorage.setItem('intelfon_token', data.token);
+  
+  // Guardar el email usado para login en sessionStorage (se limpia al cerrar sesión)
+  sessionStorage.setItem('intelfon_user_email', email.trim().toLowerCase());
+  
+  // Almacenar información del usuario EXACTAMENTE como viene del webhook
+  // NO se permite sobrescribir con mapeos locales - todo debe venir del webhook
+  // Buscar país en todos los campos posibles de data.user
+  const paisDelUsuario = data.user.pais || data.user.country || data.user.país || 
+                         data.user.Pais || data.user.Country || data.user.PAIS || 
+                         data.user.COUNTRY || (data.user as any).pais_usuario || 
+                         (data.user as any).country_user || (data.user as any).user_pais ||
+                         undefined;
+  
+  const user: User = {
+    id: data.user.id,
+    name: data.user.name.trim(),
+    role: userRole,
+    avatar: data.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.user.name)}&background=0f172a&color=fff`,
+    pais: paisDelUsuario
+  };
+  
+  localStorage.setItem('intelfon_user', JSON.stringify(user));
+  return user;
+};
+
+
+export const api = {
+  getUser(): User | null {
+    const data = localStorage.getItem('intelfon_user');
+    return data ? JSON.parse(data) : null;
+  },
+
+  getToken(): string | null {
+    return localStorage.getItem('intelfon_token');
+  },
+
+  async authenticate(email: string, pass: string): Promise<User> {
+    // Validaciones previas
+    if (!email || !email.trim()) {
+      throw new Error('El correo electrónico es requerido');
+    }
+    if (!pass || !pass.trim()) {
+      throw new Error('La contraseña es requerida');
+    }
+    
+    // Validar formato de email básico
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      throw new Error('Formato de correo electrónico inválido');
+    }
+    
+    const emailLower = email.trim().toLowerCase();
+    
+    // Todas las cuentas DEBEN estar registradas y almacenadas en el sistema
+    // El webhook de Make.com verifica si el usuario existe en su base de datos
+    // Si el usuario no está almacenado, el webhook retornará un error
+    try {
+      const user = await authenticateWithWebhook(email.trim(), pass);
+      // Si llegamos aquí, el usuario está almacenado en el sistema y las credenciales son correctas
+      return user;
+    } catch (error: any) {
+      // Limpiar cualquier dato previo en caso de error
+      localStorage.removeItem('intelfon_user');
+      localStorage.removeItem('intelfon_token');
+      sessionStorage.removeItem('intelfon_user_email');
+      
+      // Mejorar el mensaje de error para indicar claramente si el usuario no está almacenado
+      const errorMessage = error.message || 'Error de autenticación';
+      if (errorMessage.includes('no registrada') || 
+          errorMessage.includes('no encontrado') || 
+          errorMessage.includes('no está almacenado') ||
+          errorMessage.includes('404')) {
+        throw new Error('Usuario no encontrado. El usuario no está almacenado en el sistema. Contacta a tu supervisor para crear una cuenta.');
+      }
+      throw error;
+    }
+  },
+
+  async getCases(): Promise<Case[]> {
+    return getCachedOrFetch('cases', async () => {
+    const user = this.getUser();
+    
+      // Intentar obtener casos usando el nuevo caseService (conecta con n8n)
+      try {
+        const cases = await caseService.getCases();
+        // Retornar incluso si está vacío, solo si no hay error
+        return cases || [];
+      } catch (err: any) {
+        // No usar localStorage como fallback, lanzar el error
+        throw err;
+          }
+    });
+  },
+
+  async getCasoById(id: string): Promise<Case | undefined> {
+    // Intentar obtener caso usando el nuevo caseService
+    try {
+      const caso = await caseService.getCaseById(id);
+      if (caso) {
+        return caso;
+      }
+    } catch (err) {
+    }
+
+    // Fallback: buscar en la lista de casos
+    const cases = await this.getCases();
+    return cases.find(c => c.id === id || c.idCaso === id || c.ticketNumber === id);
+  },
+
+  async updateCaseStatus(id: string, status: string, detail: string, extra?: any): Promise<boolean> {
+    const user = this.getUser();
+
+    // Obtener cliente_id del caso si está disponible en extra o del caso actual
+    const clienteId = extra?.clienteId || extra?.cliente_id || extra?.clientId || null;
+
+    // Actualizar usando caseService (conecta con n8n)
+    // NO usar fallback local, si falla debe lanzar error
+    await caseService.updateCaseStatus(id, status, detail || `Cambio de estado a ${status}`, clienteId || undefined);
+    
+    // Limpiar caché de casos para forzar actualización
+    clearCache('cases');
+    
+    return true;
+  },
+
+  async createCase(caseData: any): Promise<boolean> {
+    const user = this.getUser();
+
+
+    // Inicializar agenteAsignado para que esté disponible en todo el scope
+    let agenteAsignado: any = null;
+
+    // 1) Intentar crear el caso usando el nuevo caseService (conecta con n8n)
+    try {
+      const dataToSend = {
+        clienteId: caseData.clienteId || '',
+        categoriaId: caseData.categoriaId || '7',
+        categoriaNombre: caseData.categoriaNombre || caseData.categoria?.nombre || caseData.categoryName || '',
+        contactChannel: caseData.contactChannel || caseData.canalOrigen || 'Web',
+        subject: caseData.subject,
+        description: caseData.description,
+        clientEmail: caseData.clientEmail || '',
+        clientName: caseData.clientName || caseData.nombreEmpresa || 'Por definir',
+        contactName: caseData.contactName || caseData.contactoPrincipal || caseData.clientName || 'Por definir',
+        phone: caseData.phone || caseData.clientPhone || caseData.telefono || '',
+        notificationChannel: caseData.notificationChannel || caseData.contactChannel || caseData.canalNotificacion || 'Email',
+        ...caseData
+      };
+      
+      const newCase = await caseService.createCase(dataToSend);
+      
+      
+      
+      // Limpiar caché de casos para forzar actualización
+      clearCache('cases');
+      return true;
+    } catch (err: any) {
+      
+      // Fallback: Método legacy
+    // Buscar la categoría seleccionada
+    const categoriaSeleccionada = caseData.categoriaId 
+      ? MOCK_CATEGORIAS.find(cat => cat.idCategoria === caseData.categoriaId)
+      : null;
+
+
+    // Determinar categoria_id y nombre para el JSON
+    const categoriaId = categoriaSeleccionada 
+      ? (typeof categoriaSeleccionada.idCategoria === 'string' ? parseInt(categoriaSeleccionada.idCategoria) || 1 : categoriaSeleccionada.idCategoria)
+      : DEFAULT_CATEGORY.categoria_id;
+    const categoriaNombre = categoriaSeleccionada?.nombre || DEFAULT_CATEGORY.nombre;
+
+
+    // Obtener agentes para la asignación
+    
+    const agentes = await this.getAgentes();
+    
+    // Determinar agente asignado según el rol del usuario que crea el caso
+    if (user?.role === 'AGENTE') {
+      // Si es un agente, asignar el caso a él mismo
+      
+      agenteAsignado = agentes.find(a => 
+        a.email?.toLowerCase() === user.email?.toLowerCase() || 
+        a.idAgente === user.id
+      );
+      
+      if (!agenteAsignado) {
+        agenteAsignado = agentes.find(a => a.estado === 'Activo') || agentes[0];
+      } else {
+      }
+    } else {
+      // Si es supervisor o gerente, usar round robin (primer agente activo con menos casos)
+      const agentesActivos = agentes.filter(a => a.estado === 'Activo');
+      agenteAsignado = agentesActivos.length > 0 ? agentesActivos[0] : agentes[0];
+    }
+    
+
+    // Construir el payload completo para n8n
+    const actorPayload = buildActorPayload(user);
+    
+    // Construir objeto cliente solo si hay clienteId, sino enviar valores por defecto
+    const clienteData = {
+      cliente_id: caseData.clienteId || 'N/A', // No generar ID aleatorio
+      nombre_empresa: caseData.clientName || 'Por definir',
+      contacto_principal: caseData.contactName || caseData.clientName || 'Por definir',
+      email: caseData.clientEmail || '',
+      telefono: caseData.phone || '',
+    };
+    
+    const n8nPayload = {
+      action: 'case.create',
+      actor: actorPayload,
+      data: {
+        cliente: clienteData,
+        categoria: {
+          categoria_id: categoriaId,
+          nombre: categoriaNombre,
+        },
+        canal_origen: caseData.contactChannel || caseData.canalOrigen || 'Web',
+        canal_notificacion: caseData.notificationChannel || caseData.contactChannel || 'Email',
+        asunto: caseData.subject,
+        descripcion: caseData.description,
+        // El backend procesa el correo del agente para asignar, usar email si está disponible
+        // Si el actor es un AGENTE, el webhook automáticamente asignará el caso a ese agente (sin round robin)
+        // Si el actor es SUPERVISOR o GERENTE, el webhook hará Round Robin automáticamente
+        agente_email: caseData.agentEmail || caseData.agenteEmail || actorPayload.email || '',
+        agente_id: agenteAsignado?.idAgente || agenteAsignado?.id || '',
+      },
+    };
+
+
+      // Intentar crear el caso en el backend n8n usando el contrato CRUD.CREATE (no bloquea la creación local)
+    try {
+      const startTime = Date.now();
+      
+      const response = await callCasesWebhook('POST', n8nPayload);
+      
+      const duration = Date.now() - startTime;
+      
+      if (response && typeof response === 'object') {
+      }
+      
+      } catch (err2: any) {
+        if (err2?.response) {
+      }
+      }
+    }
+
+    // 2) Crear siempre el caso en local (modo demo / sin backend disponible)
+    const cases = await this.getCases();
+    const newId = `CASO-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newEntry = {
+      ...caseData,
+      idCaso: newId,
+      id: newId,
+      ticketNumber: newId,
+      // NO asignar agente localmente - el Round Robin de n8n lo asignará
+      agentId: '',
+      agentName: 'Sin asignar',
+      categoria: { nombre: 'General', slaDias: 2 },
+      category: 'General',
+      canalOrigen: caseData.contactChannel || caseData.canalOrigen || 'Web',
+      origin: caseData.contactChannel || caseData.canalOrigen || 'Web',
+      diasAbierto: 0,
+      createdAt: new Date().toISOString(),
+      historial: [{
+        tipo_evento: "CREADO",
+        justificacion: "Caso creado",
+        autor_nombre: "Sistema",
+        autor_rol: "sistema",
+        fecha: new Date().toISOString()
+      }],
+      history: [{
+        tipo_evento: "CREADO",
+        justificacion: "Caso creado",
+        autor_nombre: "Sistema",
+        autor_rol: "sistema",
+        fecha: new Date().toISOString()
+      }]
+    };
+    cases.unshift(newEntry);
+    localStorage.setItem('intelfon_cases', JSON.stringify(cases));
+    
+    // Limpiar caché para que el dashboard actualice
+    clearCache('cases');
+    
+    return true;
+  },
+
+  async getKPIs(): Promise<KPI> {
+    const cases = await this.getCases();
+    
+    // Calcular SLA Compliance basado en casos reales
+    const casosConSLA = cases.filter(c => {
+      const slaDias = c.categoria?.slaDias || (c as any).categoria?.sla_dias || 5;
+      return c.diasAbierto !== undefined && slaDias > 0;
+    });
+    
+    const casosCumplenSLA = casosConSLA.filter(c => {
+      const slaDias = c.categoria?.slaDias || (c as any).categoria?.sla_dias || 5;
+      return c.diasAbierto < slaDias;
+    });
+    
+    // Si no hay casos con SLA, no puede ser 100%, debe ser null o 0
+    const slaCompliance = casosConSLA.length > 0 
+      ? Math.round((casosCumplenSLA.length / casosConSLA.length) * 100)
+      : null;
+    
+    // Calcular CSAT promedio si está disponible en los casos
+    const casosConCSAT = cases.filter(c => {
+      const csat = (c as any).csat_rating || (c as any).csatRating || (c as any).csat;
+      return csat && !isNaN(parseFloat(csat)) && parseFloat(csat) > 0;
+    });
+    
+    // Si no hay datos de CSAT, retornar null en lugar de un valor mock
+    const csatScore = casosConCSAT.length > 0
+      ? casosConCSAT.reduce((sum, c) => {
+          const csat = parseFloat((c as any).csat_rating || (c as any).csatRating || (c as any).csat || '0');
+          return sum + csat;
+        }, 0) / casosConCSAT.length
+      : null; // No usar fallback, retornar null si no hay datos
+    
+    return {
+      totalCases: cases.length,
+      slaCompliance,
+      csatScore: Math.round(csatScore * 10) / 10 // Redondear a 1 decimal
+    };
+  },
+
+  async validateSession(): Promise<boolean> {
+    // Validar que exista usuario Y token
+    // Si no hay token, la sesión no es válida aunque haya usuario en localStorage
+    const user = this.getUser();
+    const token = this.getToken();
+    
+    if (!user || !token) {
+      // Limpiar datos inválidos
+      localStorage.removeItem('intelfon_user');
+      localStorage.removeItem('intelfon_token');
+      return false;
+    }
+    
+    // Validar que el usuario tenga estructura válida
+    if (!user.id || !user.name || !user.role) {
+      localStorage.removeItem('intelfon_user');
+      localStorage.removeItem('intelfon_token');
+      return false;
+    }
+    
+    // Validar que el rol sea válido
+    if (!['AGENTE', 'SUPERVISOR', 'GERENTE'].includes(user.role)) {
+      localStorage.removeItem('intelfon_user');
+      localStorage.removeItem('intelfon_token');
+      return false;
+    }
+    
+    return true;
+  },
+
+  async getAgentes(): Promise<any[]> {
+    return getCachedOrFetch('agentes', async () => {
+      const currentUser = this.getUser();
+      
+      if (!currentUser) {
+        // Si no hay usuario, usar datos locales
+    initStorage();
+    const data = localStorage.getItem('intelfon_agents');
+    return data ? JSON.parse(data) : MOCK_AGENTES;
+      }
+
+      const actor = buildActorPayload(currentUser);
+
+      // Construir el payload según el formato del webhook de agentes
+      const payload = {
+        action: 'agent.read',
+        actor: {
+          user_id: String(actor.user_id || ''),
+          email: actor.email,
+          role: actor.role
+        },
+        data: {
+          agent_id: 'all'
+        }
+      };
+
+
+      // Llamar al webhook de agentes
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+      try {
+        const response = await fetch(API_CONFIG.WEBHOOK_AGENTES_URL, {
+          method: 'POST',
+          mode: 'cors',
+          credentials: 'omit',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          if (response.status === 0) {
+            throw new Error('Error de CORS: El servidor no está permitiendo peticiones desde este origen.');
+          }
+          const errorText = await response.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { message: errorText || `Error ${response.status}: ${response.statusText}` };
+          }
+          throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        // Verificar si hay error en la respuesta
+        if (result.error === true) {
+          throw new Error(result.message || 'Error al obtener los agentes');
+        }
+
+        // Mapear la respuesta a un array de agentes
+        // El webhook puede retornar diferentes formatos:
+        // 1. { agents: [...] } o { agentes: [...] }
+        // 2. Array directo de agentes
+        // 3. [{ data: [...] }] - estructura anidada
+        // 4. { data: [...] } o { data: { agents/agentes: [...] } }
+        let agents: any[] = [];
+
+        if (Array.isArray(result.agents)) {
+          agents = result.agents;
+        } else if (Array.isArray(result.agentes)) {
+          agents = result.agentes;
+        } else if (result.data) {
+          if (Array.isArray(result.data)) {
+            agents = result.data;
+          } else if (result.data && typeof result.data === 'object') {
+            agents = result.data.agents ?? result.data.agentes ?? [];
+            if (!Array.isArray(agents)) agents = [];
+          }
+        } else if (Array.isArray(result)) {
+          if (result.length > 0 && result[0]?.data && Array.isArray(result[0].data)) {
+            agents = result[0].data;
+          } else if (result.length > 0 && result[0]?.data?.agents) {
+            agents = result[0].data.agents;
+          } else if (result.length > 0 && result[0]?.data?.agentes) {
+            agents = result[0].data.agentes;
+          } else {
+            agents = result;
+          }
+        }
+        // Fallback: buscar cualquier array de objetos con id_agente/idAgente
+        if (agents.length === 0 && result && typeof result === 'object') {
+          for (const key of Object.keys(result)) {
+            const val = (result as any)[key];
+            if (Array.isArray(val) && val.length > 0) {
+              const first = val[0];
+              if (first && typeof first === 'object' && (first.id_agente != null || first.idAgente != null || first.id != null)) {
+                agents = val;
+                break;
+              }
+            }
+          }
+        }
+        
+        
+        if (Array.isArray(agents) && agents.length > 0) {
+          let mappedAgents = agents.map((agente: any) => {
+            // Determinar el estado: el webhook puede retornar "ACTIVO", "INACTIVO", "VACACIONES"
+            let estado: 'Activo' | 'Inactivo' | 'Vacaciones' = 'Inactivo';
+            const estadoRaw = agente.estado || agente.state || '';
+            if (estadoRaw.toUpperCase() === 'ACTIVO' || estadoRaw === 'Activo') {
+              estado = 'Activo';
+            } else if (estadoRaw.toUpperCase() === 'VACACIONES' || estadoRaw === 'Vacaciones') {
+              estado = 'Vacaciones';
+            } else {
+              estado = 'Inactivo';
+            }
+            
+            // Parsear fecha del último caso asignado (soporta DD/MM/YYYY y DD/MM/YYYY HH:mm:ss)
+            const toIsoDate = (value: unknown): string => {
+              if (!value) return new Date().toISOString();
+
+              if (value instanceof Date && !isNaN(value.getTime())) {
+                return value.toISOString();
+              }
+
+              const raw = String(value).trim();
+              if (!raw) return new Date().toISOString();
+
+              if (raw.includes('/')) {
+                const match = raw.match(
+                  /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+                );
+                if (match) {
+                  const [, d, m, y, h = '0', min = '0', s = '0'] = match;
+                  const parsed = new Date(
+                    Number(y),
+                    Number(m) - 1,
+                    Number(d),
+                    Number(h),
+                    Number(min),
+                    Number(s)
+                  );
+                  if (!isNaN(parsed.getTime())) {
+                    return parsed.toISOString();
+                  }
+                }
+              }
+
+              const fallback = new Date(raw);
+              if (!isNaN(fallback.getTime())) {
+                return fallback.toISOString();
+              }
+
+              return new Date().toISOString();
+            };
+
+            const ultimoCasoAsignado = toIsoDate(
+              agente.ultimo_caso_asignado || agente.ultimoCasoAsignado || new Date().toISOString()
+            );
+            
+            // Mapear país desde múltiples fuentes posibles
+            const paisRaw = agente.pais || agente.country || agente.país || agente.Pais || agente.Country || 
+                           (agente as any).pais_usuario || (agente as any).country_user || undefined;
+            return {
+              idAgente: agente.id_agente || agente.idAgente || agente.id || '',
+              nombre: agente.nombre || agente.name || '',
+              email: agente.email || '',
+              estado: estado,
+              ordenRoundRobin: 999, // Se calculará después
+              ultimoCasoAsignado: ultimoCasoAsignado,
+              casosActivos: agente.casos_activos !== undefined ? agente.casos_activos : (agente.casosActivos || agente.casos_asignados || 0),
+              pais: paisRaw || undefined
+            };
+          }).filter((agente: any) => {
+            const tieneId = agente.idAgente || agente.id_agente || agente.id;
+            return !!tieneId;
+          });
+          // Calcular el orden Round Robin en el frontend
+          // Lógica: 1. Menor cantidad de casos activos = mayor prioridad
+          //         2. Si hay empate, el que tenga el caso más antiguo (fecha más antigua) = mayor prioridad
+          try {
+            const casos = await this.getCases();
+            
+            // Contar casos activos por agente y obtener fecha del último caso
+            const agentesConCasos = mappedAgents.map(agente => {
+              const casosAgente = casos.filter(c => 
+                (c.agenteAsignado?.idAgente === agente.idAgente || c.agentId === agente.idAgente) &&
+                c.status !== CaseStatus.RESUELTO && c.status !== CaseStatus.CERRADO
+              );
+              
+              const casosActivos = casosAgente.length;
+              
+              // Obtener la fecha del caso más antiguo (último caso asignado)
+              let fechaUltimoCaso = new Date(agente.ultimoCasoAsignado);
+              if (casosAgente.length > 0) {
+                const fechasCasos = casosAgente
+                  .map(c => new Date(c.createdAt))
+                  .filter(d => !isNaN(d.getTime()));
+                
+                if (fechasCasos.length > 0) {
+                  // La fecha más antigua (menor timestamp)
+                  fechaUltimoCaso = new Date(Math.min(...fechasCasos.map(d => d.getTime())));
+                }
+              }
+              
+              return {
+                ...agente,
+                casosActivos: casosActivos, // Usar casos reales del sistema
+                ultimoCasoAsignado: fechaUltimoCaso.toISOString(),
+                _fechaUltimoCaso: fechaUltimoCaso.getTime() // Para ordenamiento
+              };
+            });
+            
+            // Separar agentes activos de inactivos
+            const agentesActivos = agentesConCasos.filter(a => a.estado === 'Activo');
+            const agentesInactivos = agentesConCasos.filter(a => a.estado !== 'Activo');
+            
+            // Ordenar solo los agentes activos por casos activos (menor primero), luego por fecha más antigua
+            agentesActivos.sort((a, b) => {
+              // Ordenar por casos activos (menor cantidad primero)
+              if (a.casosActivos !== b.casosActivos) {
+                return a.casosActivos - b.casosActivos; // Menor cantidad = mayor prioridad
+              }
+              
+              // Si tienen la misma cantidad de casos, ordenar por fecha más antigua primero
+              return a._fechaUltimoCaso - b._fechaUltimoCaso;
+            });
+            
+            // Asignar orden round robin (1, 2, 3, ...) solo a agentes activos
+            const agentesActivosConOrden = agentesActivos.map((agente, index) => ({
+              ...agente,
+              ordenRoundRobin: index + 1
+            }));
+            
+            // Asignar orden 999 a agentes inactivos
+            const agentesInactivosConOrden = agentesInactivos.map(agente => ({
+              ...agente,
+              ordenRoundRobin: 999
+            }));
+            
+            // Combinar: primero activos ordenados, luego inactivos
+            mappedAgents = [...agentesActivosConOrden, ...agentesInactivosConOrden];
+          } catch (error) {
+            // Si falla, mantener los valores originales
+          }
+          
+          
+          // Guardar en localStorage como cache
+          localStorage.setItem('intelfon_agents', JSON.stringify(mappedAgents));
+          return mappedAgents;
+        }
+
+        // Si no hay agentes, usar fallback local
+        initStorage();
+        const data = localStorage.getItem('intelfon_agents');
+        return data ? JSON.parse(data) : MOCK_AGENTES;
+      } catch (err: any) {
+        // Fallback: usar datos locales
+        initStorage();
+        const data = localStorage.getItem('intelfon_agents');
+        return data ? JSON.parse(data) : MOCK_AGENTES;
+      }
+    });
+  },
+
+  // Obtener lista de usuarios desde el webhook de crear usuario
+  // Este webhook retorna TODOS los usuarios creados desde ese flujo
+  async getUsuarios(): Promise<any[]> {
+    return getCachedOrFetch('usuarios', async () => {
+      const currentUser = this.getUser();
+      
+      if (!currentUser) {
+        return [];
+      }
+
+      const actor = buildActorPayload(currentUser);
+
+      // Construir el payload para listar usuarios
+      const payload = {
+        action: 'user.read',
+        actor: {
+          user_id: String(actor.user_id || ''),
+          email: actor.email,
+          role: actor.role
+        },
+        data: {
+          id: "all"
+        }
+      };
+
+
+      // Llamar al webhook de crear usuario (que también lista usuarios)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+      try {
+        const response = await fetch(API_CONFIG.WEBHOOK_CREAR_USUARIO_URL, {
+          method: 'POST',
+          mode: 'cors',
+          credentials: 'omit',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          if (response.status === 0) {
+            throw new Error('Error de CORS: El servidor no está permitiendo peticiones desde este origen.');
+          }
+          const errorText = await response.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { message: errorText || `Error ${response.status}: ${response.statusText}` };
+          }
+          throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        // Verificar si hay error en la respuesta
+        if (result.error === true) {
+          throw new Error(result.message || 'Error al obtener los usuarios');
+        }
+
+        // El webhook puede retornar diferentes formatos:
+        // 1. { users: [...] } o { usuarios: [...] }
+        // 2. Array directo de usuarios
+        // 3. { data: [...] } o { data: { users/usuarios: [...] } }
+        // 4. [{ data: [...] }] - array con objeto que contiene data
+        let usuarios: any[] = [];
+
+        if (Array.isArray(result)) {
+          if (result.length > 0 && result[0] && typeof result[0] === 'object' && 'data' in result[0]) {
+            const d = result[0].data;
+            if (Array.isArray(d)) {
+              usuarios = d;
+            } else if (d && typeof d === 'object' && (Array.isArray(d.users) || Array.isArray(d.usuarios))) {
+              usuarios = d.users ?? d.usuarios ?? [];
+            } else {
+              usuarios = result;
+            }
+          } else {
+            usuarios = result;
+          }
+        } else if (result && typeof result === 'object') {
+          if (Array.isArray(result.users)) usuarios = result.users;
+          else if (Array.isArray(result.usuarios)) usuarios = result.usuarios;
+          else if (Array.isArray(result.data)) usuarios = result.data;
+          else if (result.data && typeof result.data === 'object') {
+            usuarios = result.data.users ?? result.data.usuarios ?? [];
+            if (!Array.isArray(usuarios)) usuarios = [];
+          }
+          // Fallback: primera propiedad que sea array de objetos con id/email
+          if (usuarios.length === 0) {
+            for (const key of Object.keys(result)) {
+              const val = (result as any)[key];
+              if (Array.isArray(val) && val.length > 0) {
+                const first = val[0];
+                if (first && typeof first === 'object' && (first.id != null || first.email != null || first.user_id != null)) {
+                  usuarios = val;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        return usuarios;
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        
+        if (error.name === 'AbortError') {
+          throw new Error('Timeout: El servidor no respondió a tiempo. Verifica tu conexión.');
+        }
+        
+        throw error;
+      }
+    });
+  },
+
+  // Obtener lista de clientes desde n8n
+  async getClientes(): Promise<Cliente[]> {
+    return getCachedOrFetch('clientes', async () => {
+    const user = this.getUser();
+    
+    try {
+      const response = await callClientsWebhook<any>('POST', {
+        action: 'case.list_client',
+        actor: buildActorPayload(user),
+        data: {
+          client: 'all',
+        },
+      });
+
+      // Función helper para mapear un cliente al formato Cliente
+      const mapCliente = (c: any): Cliente => ({
+        idCliente: c.cliente_id || c.idCliente || c.id || '',
+        nombreEmpresa: c.nombre_empresa || c.nombreEmpresa || c.nombre || '',
+        contactoPrincipal: c.contacto_principal || c.contactoPrincipal || c.contacto || 'N/A',
+        email: c.email || c.correo || 'sin-email@cliente.com',
+        telefono: c.telefono || c.phone || c.tel || 'N/A',
+        pais: c.pais || c.country || 'El Salvador',
+        estado: c.estado || c.state || c.status || 'ACTIVO',
+      });
+
+      // Intentar diferentes formatos de respuesta de n8n
+      let clientesArray: any[] = [];
+
+      if (Array.isArray(response)) {
+        if (response.length > 0 && response[0]?.data) {
+          const d = response[0].data;
+          clientesArray = Array.isArray(d) ? d : (d?.clientes ?? d?.clients ?? []);
+          if (!Array.isArray(clientesArray)) clientesArray = [];
+        } else {
+          clientesArray = response;
+        }
+      } else if (response && typeof response === 'object') {
+        if (Array.isArray(response.clients)) clientesArray = response.clients;
+        else if (Array.isArray(response.clientes)) clientesArray = response.clientes;
+        else if (Array.isArray(response.data)) clientesArray = response.data;
+        else if (response.data && typeof response.data === 'object') {
+          clientesArray = response.data.clientes ?? response.data.clients ?? response.data.data ?? [];
+          if (!Array.isArray(clientesArray)) clientesArray = [];
+        } else if (Array.isArray(response.result)) clientesArray = response.result;
+        // Fallback: primera propiedad que sea array de objetos con cliente_id/idCliente
+        if (clientesArray.length === 0) {
+          for (const key of Object.keys(response)) {
+            const val = (response as any)[key];
+            if (Array.isArray(val) && val.length > 0) {
+              const first = val[0];
+              if (first && typeof first === 'object' && (first.cliente_id != null || first.idCliente != null || first.id != null)) {
+                clientesArray = val;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (clientesArray.length > 0) {
+          const mapped = clientesArray.map(mapCliente);
+          return mapped;
+      }
+
+      // Si la respuesta no tiene el formato esperado, usar fallback
+      return MOCK_CLIENTES;
+    } catch (err) {
+      return MOCK_CLIENTES;
+    }
+    });
+  },
+
+  // Obtener cliente por ID (para autocompletar campos)
+  async getClienteById(clienteId: string): Promise<Cliente | undefined> {
+    // TODO: Cuando esté listo el flujo de n8n, aquí se hará POST al webhook con action: "client.read" y cliente_id
+    // Por ahora buscamos en mock
+    return MOCK_CLIENTES.find(c => c.idCliente === clienteId);
+  },
+
+  // Obtener lista de categorías (por ahora mock, luego se conectará con n8n)
+  async getCategorias(): Promise<Categoria[]> {
+    try {
+      const categoriesFromWebhook = await this.readCategories();
+
+      if (Array.isArray(categoriesFromWebhook) && categoriesFromWebhook.length > 0) {
+        const mappedCategorias = categoriesFromWebhook
+          .map((cat: any, index: number): Categoria => {
+            const idCategoria = String(
+              cat.id ??
+              cat.idCategoria ??
+              cat.category_id ??
+              cat.id_categoria ??
+              index + 1
+            );
+
+            const nombre = String(
+              cat.name ??
+              cat.nombre ??
+              cat.category_name ??
+              cat.categoryName ??
+              cat.caegoria ??
+              cat.categoria ??
+              'Sin nombre'
+            );
+
+            const parsedSla = Number(
+              cat.slaDays ??
+              cat.slaDias ??
+              cat.sla ??
+              cat.sla_dias ??
+              cat['valor SLA'] ??
+              cat.valorSLA ??
+              3
+            );
+            const slaDias = Number.isFinite(parsedSla) ? parsedSla : 3;
+
+            const activaRaw = cat.activa ?? cat.activo ?? cat.isActive ?? cat.estado_activo ?? cat.estado;
+            const activa = typeof activaRaw === 'boolean'
+              ? activaRaw
+              : String(activaRaw ?? 'activo').trim().toLowerCase() !== 'false' &&
+                String(activaRaw ?? 'activo').trim().toLowerCase() !== 'inactivo';
+
+            return {
+              idCategoria,
+              nombre,
+              slaDias,
+              diasAlertaSupervisor: Math.max(1, Math.floor(slaDias * 0.6)),
+              diasAlertaGerente: Math.max(1, Math.floor(slaDias * 0.8)),
+              activa,
+              descripcion: String(cat.description ?? cat.descripcion ?? '')
+            };
+          })
+          .filter((cat: Categoria) => cat.activa);
+
+        if (mappedCategorias.length > 0) {
+          return mappedCategorias;
+        }
+      }
+    } catch (error) {
+      // Fallback controlado a mock
+    }
+
+    return MOCK_CATEGORIAS.filter(cat => cat.activa);
+  },
+
+  // Crear nueva categoría mediante webhook
+  async createCategory(categoryData: {
+    category_name: string;
+    description: string;
+    sla: number;
+  }): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor con el formato esperado
+    const actor = buildActorPayload(user);
+    // Mapear el role: ADMIN -> ADMINISTRADOR, otros roles se mantienen
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Construir el payload según el formato especificado
+    const payload = {
+      action: 'category.create',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {
+        id: '', // Vacío según el formato especificado
+        category_name: categoryData.category_name,
+        description: categoryData.description,
+        sla: String(categoryData.sla) // Convertir a string según el formato
+      }
+    };
+
+    try {
+      const response = await callCategoriesWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al crear la categoría');
+    }
+  },
+
+  // Actualizar categoría existente mediante webhook
+  async updateCategory(categoryData: {
+    id: string;
+    category_name: string;
+    description: string;
+    sla: number;
+  }): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor con el formato esperado
+    const actor = buildActorPayload(user);
+    // Mapear el role: ADMIN -> ADMINISTRADOR, otros roles se mantienen
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Construir el payload según el formato especificado
+    const payload = {
+      action: 'category.update',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {
+        id: categoryData.id,
+        category_name: categoryData.category_name || '',
+        description: categoryData.description || '',
+        sla: String(categoryData.sla) // Convertir a string según el formato
+      }
+    };
+
+    try {
+      const response = await callCategoriesWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al actualizar la categoría');
+    }
+  },
+
+  // Eliminar categoría mediante webhook
+  async deleteCategory(categoryId: string): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor con el formato esperado
+    const actor = buildActorPayload(user);
+    // Mapear el role: ADMIN -> ADMINISTRADOR, otros roles se mantienen
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Construir el payload según el formato especificado
+    const payload = {
+      action: 'category.delete',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {
+        id: categoryId
+      }
+    };
+
+    try {
+      const response = await callCategoriesWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al eliminar la categoría');
+    }
+  },
+
+  // Leer todas las categorías mediante webhook
+  async readCategories(): Promise<any[]> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor con el formato esperado
+    const actor = buildActorPayload(user);
+    // Mapear el role: ADMIN -> ADMINISTRADOR, otros roles se mantienen
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Construir el payload según el formato especificado
+    // Para obtener todas las categorías, el data.id puede estar vacío o ser "all"
+    const payload = {
+      action: 'category.read',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {
+        id: '' // Vacío para obtener todas las categorías
+      }
+    };
+
+    try {
+      const response = await callCategoriesWebhook('POST', payload);
+      // El webhook retorna un formato específico:
+      // [
+      //   {
+      //     "data": [
+      //       {
+      //         "id": 2,
+      //         "caegoria": "Facturación",  // Nota: typo en "caegoria"
+      //         "descripcion": "",
+      //         "valor SLA": 5
+      //       },
+      //       ...
+      //     ]
+      //   }
+      // ]
+      let categories: any[] = [];
+      
+      // Manejar el formato específico del webhook
+      if (Array.isArray(response) && response.length > 0) {
+        // Si es un array, buscar el objeto que contiene "data"
+        const firstItem = response[0];
+        if (firstItem && typeof firstItem === 'object' && firstItem.data) {
+          categories = Array.isArray(firstItem.data) ? firstItem.data : [];
+        } else if (Array.isArray(firstItem)) {
+          categories = firstItem;
+        } else {
+          // Intentar otros formatos comunes
+          categories = firstItem.categories || 
+                       firstItem.categorias || 
+                       firstItem.result ||
+                       firstItem.results ||
+                       (Array.isArray(firstItem.items) ? firstItem.items : []);
+        }
+      } else if (response && typeof response === 'object') {
+        // Si no es array, buscar propiedades comunes (incl. data anidado)
+        const dataObj = response.data && typeof response.data === 'object' && !Array.isArray(response.data)
+          ? response.data
+          : null;
+        categories = response.categories ||
+                     response.categorias ||
+                     (Array.isArray(response.data) ? response.data : null) ||
+                     (dataObj ? (dataObj.categories ?? dataObj.categorias ?? dataObj.data) : null) ||
+                     response.result ||
+                     response.results ||
+                     (Array.isArray(response.items) ? response.items : null) ||
+                     [];
+        if (!Array.isArray(categories)) categories = [];
+      }
+
+      if (!categories || categories.length === 0) {
+        return [];
+      }
+
+      // Mapear las categorías del webhook al formato local
+      // El webhook usa: "caegoria" (typo), "descripcion", "valor SLA"
+      const mappedCategories = categories.map((cat: any, index: number) => {
+        const mapped = {
+          id: String(cat.id || cat.idCategoria || cat.category_id || cat.id_categoria || String(index + 1)),
+          name: cat.name || 
+                cat.nombre || 
+                cat.category_name || 
+                cat.categoryName || 
+                cat.caegoria ||  // Manejar el typo del webhook
+                cat.categoria ||
+                'Sin nombre',
+          slaDays: Number(cat.slaDays || 
+                         cat.slaDias || 
+                         cat.sla || 
+                         cat.sla_dias || 
+                         cat['valor SLA'] ||  // Manejar "valor SLA" con espacio
+                         cat.valorSLA ||
+                         3),
+          isActive: cat.activa === undefined && cat.activo === undefined && cat.isActive === undefined && cat.estado === undefined
+            ? true
+            : Boolean(
+                cat.activa ??
+                cat.activo ??
+                cat.isActive ??
+                (String(cat.estado || '').toLowerCase() === 'activo')
+              ),
+          description: String(cat.description || 
+                            cat.descripcion || 
+                            cat.desc || 
+                            '')
+        };
+        return mapped;
+      });
+      return mappedCategories;
+    } catch (error: any) {
+      return [];
+    }
+  },
+
+  // Buscar categoría por ID mediante webhook
+  async queryCategory(categoryId: string): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor con el formato esperado
+    const actor = buildActorPayload(user);
+    // Mapear el role: ADMIN -> ADMINISTRADOR, otros roles se mantienen
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Construir el payload según el formato especificado
+    const payload = {
+      action: 'category.query',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {
+        id: categoryId
+      }
+    };
+
+    try {
+      const response = await callCategoriesWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al buscar la categoría');
+    }
+  },
+
+  // Crear nuevo estado mediante webhook
+  async createState(stateData: {
+    id: string;
+    nombre: string;
+    descripcion: string;
+    orden: string;
+    orden_final: string;
+  }): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    const actor = buildActorPayload(user);
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+    const payload = {
+      action: 'estado.create',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {
+        id: stateData.id,
+        nombre: stateData.nombre,
+        descripcion: stateData.descripcion,
+        orden: stateData.orden,
+        orden_final: stateData.orden_final
+      }
+    };
+    try {
+      const response = await callEstadosWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al crear el estado');
+    }
+  },
+
+  // Actualizar orden de estados mediante webhook
+  async updateEstados(estados: Array<{
+    id: string;
+    nombre: string;
+    descripcion: string;
+    orden: number;
+    es_final: boolean;
+  }>): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor con el formato esperado
+    const actor = buildActorPayload(user);
+    // Mapear el role: ADMIN -> ADMINISTRADOR, otros roles se mantienen
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Construir el payload según el formato especificado
+    const payload = {
+      action: 'estado.update',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {
+        estados: estados
+      }
+    };
+
+    try {
+      const response = await callEstadosWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al actualizar el orden de los estados');
+    }
+  },
+
+  // Leer transiciones de estados mediante webhook
+  async readTransiciones(): Promise<Record<string, { transiciones: string[] }>> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    const actor = buildActorPayload(user);
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+    const payload = {
+      action: 'transicion.read',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {}
+    };
+    try {
+      const response = await callEstadosWebhook('POST', payload);
+      // El formato esperado es: [{ "data": [{ "estado_origen": "nuevo", "estado_destino": "en_proceso", "permitido": true }, ...] }]
+      let transicionesData: Record<string, { transiciones: string[] }> = {};
+      
+      if (response && typeof response === 'object') {
+        // Si es un array (formato esperado: [{ "data": [...] }])
+        if (Array.isArray(response)) {
+          if (response.length > 0 && response[0] && typeof response[0] === 'object') {
+            if (response[0].data && Array.isArray(response[0].data)) {
+              const transicionesArray = response[0].data;
+              
+              // Agrupar por estado_origen y construir el formato esperado
+              transicionesArray.forEach((transicion: any) => {
+                if (transicion && transicion.estado_origen && transicion.estado_destino && transicion.permitido === true) {
+                  const estadoOrigen = transicion.estado_origen;
+                  const estadoDestino = transicion.estado_destino;
+                  
+                  // Inicializar el estado origen si no existe
+                  if (!transicionesData[estadoOrigen]) {
+                    transicionesData[estadoOrigen] = { transiciones: [] };
+                  }
+                  
+                  // Agregar el estado destino a las transiciones permitidas
+                  if (!transicionesData[estadoOrigen].transiciones.includes(estadoDestino)) {
+                    transicionesData[estadoOrigen].transiciones.push(estadoDestino);
+                  }
+                  
+                }
+              });
+            } else if (response[0].data && typeof response[0].data === 'object' && !Array.isArray(response[0].data)) {
+              transicionesData = response[0].data;
+            }
+          }
+        } 
+        else {
+          if (response.data) {
+            if (Array.isArray(response.data)) {
+              const transicionesArray = response.data;
+              
+              transicionesArray.forEach((transicion: any) => {
+                if (transicion && transicion.estado_origen && transicion.estado_destino && transicion.permitido === true) {
+                  const estadoOrigen = transicion.estado_origen;
+                  const estadoDestino = transicion.estado_destino;
+                  
+                  if (!transicionesData[estadoOrigen]) {
+                    transicionesData[estadoOrigen] = { transiciones: [] };
+                  }
+                  
+                  if (!transicionesData[estadoOrigen].transiciones.includes(estadoDestino)) {
+                    transicionesData[estadoOrigen].transiciones.push(estadoDestino);
+                  }
+                }
+              });
+            } else if (typeof response.data === 'object') {
+              transicionesData = response.data;
+            }
+          } else {
+            transicionesData = response as Record<string, { transiciones: string[] }>;
+          }
+        }
+      }
+      return transicionesData;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al leer las transiciones');
+    }
+  },
+
+  // Actualizar transiciones de estados mediante webhook
+  async updateTransiciones(transicionesData: Record<string, { transiciones: string[] }>): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    const actor = buildActorPayload(user);
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+    const payload = {
+      action: 'transicion.update',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: transicionesData
+    };
+    try {
+      const response = await callEstadosWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al actualizar las transiciones');
+    }
+  },
+
+  // Eliminar estado mediante webhook
+  async deleteState(stateId: string): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    const actor = buildActorPayload(user);
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+    const payload = {
+      action: 'estado.delete',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {
+        id: stateId
+      }
+    };
+    try {
+      const response = await callEstadosWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al eliminar el estado');
+    }
+  },
+
+  // Leer todos los estados mediante webhook
+  async readEstados(): Promise<Array<{
+    id: string;
+    name: string;
+    order: number;
+    isFinal: boolean;
+  }>> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    const actor = buildActorPayload(user);
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+    const payload = {
+      action: 'estado.read',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {
+        id: 'all'
+      }
+    };
+    try {
+      const response = await callEstadosWebhook('POST', payload);
+      // El formato esperado es: [{ "data": [...] }]
+      let estados: any[] = [];
+      
+      if (response === null || response === undefined) {
+        return [];
+      }
+      if (Array.isArray(response)) {
+        if (response.length > 0 && response[0] && typeof response[0] === 'object') {
+          if (Array.isArray(response[0].data)) {
+            estados = response[0].data;
+          } else {
+            const tieneEstados = response.some(item => 
+              item && typeof item === 'object' && (item.id !== undefined || item.nombre !== undefined || item.name !== undefined)
+            );
+            if (tieneEstados) {
+              estados = response;
+            }
+          }
+        } else {
+          const tieneEstados = response.some(item => 
+            item && typeof item === 'object' && (item.id !== undefined || item.nombre !== undefined || item.name !== undefined)
+          );
+          if (tieneEstados) {
+            estados = response;
+          }
+        }
+      } else if (response && typeof response === 'object') {
+        const posiblesEstados = [
+          response.data,
+          response.estados,
+          response.result,
+          response.results,
+          response.items,
+        ];
+        for (const posibleEstado of posiblesEstados) {
+          if (Array.isArray(posibleEstado) && posibleEstado.length > 0) {
+            estados = posibleEstado;
+            break;
+          }
+        }
+      }
+      if (!estados || estados.length === 0) {
+        return [];
+      }
+
+      // Mapear los estados del webhook al formato local
+      // El webhook retorna: { id, nombre, descripcion, orden, estado_final }
+      // IMPORTANTE: El ID siempre debe ser texto normalizado (ej: "en_proceso"), no números
+      const mappedEstados = estados.map((estado: any, index: number) => {
+        // El ID debe preservarse si viene del webhook; solo generar desde nombre cuando no exista.
+        const normalizeEstadoId = (value: string): string => {
+          return value
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // Remover tildes
+            .replace(/\s+/g, '_') // Reemplazar espacios con guiones bajos
+            .replace(/[^a-z0-9_]/g, ''); // Remover caracteres especiales
+        };
+
+        let estadoIdRaw = estado.id ?? estado.id_estado ?? estado.estado_id;
+        let estadoId = '';
+
+        if (estadoIdRaw !== null && estadoIdRaw !== undefined && String(estadoIdRaw).trim() !== '') {
+          estadoId = normalizeEstadoId(String(estadoIdRaw));
+        }
+
+        if (!estadoId) {
+          if (estado.nombre || estado.name) {
+            const nombreEstado = String(estado.nombre || estado.name);
+            estadoId = normalizeEstadoId(nombreEstado);
+          } else {
+            estadoId = `estado_${index + 1}`;
+          }
+        }
+
+        return {
+          id: String(estadoId),
+          name: estado.nombre || estado.name || 'Sin nombre',
+          order: Number(estado.orden || estado.order || index + 1),
+          isFinal: estado.estado_final === true || estado.estado_final === 'true' || 
+                   estado.es_final === true || estado.es_final === 'true' || 
+                   estado.isFinal === true || estado.is_final === true || false
+        };
+      });
+      mappedEstados.sort((a, b) => a.order - b.order);
+      return mappedEstados;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al leer los estados');
+    }
+  },
+
+  async updateAgente(id: string, data: any): Promise<boolean> {
+    
+    // Obtener el usuario actual (actor)
+    const currentUser = this.getUser();
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor
+    const actor = buildActorPayload(currentUser);
+
+    // Construir el payload para el webhook de agentes
+    // Solo enviar agent_id y estado (uno de: Activo/Inactivo/Vacaciones)
+    const payload = {
+      action: 'agent.update',
+      actor: {
+        user_id: String(actor.user_id || ''),
+        email: actor.email,
+        role: actor.role
+      },
+      data: {
+        agent_id: id,
+        estado: data.estado // Puede ser: "Activo", "Inactivo" o "Vacaciones"
+      }
+    };
+
+
+    try {
+      // Enviar actualización al webhook de agentes
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+      const response = await fetch(API_CONFIG.WEBHOOK_AGENTES_URL, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      // Limpiar caché para forzar recarga
+      clearCache('agentes');
+      
+      return true;
+    } catch (error: any) {
+      
+      // Fallback: actualizar en localStorage
+      const agentes = await this.getAgentes();
+      const idx = agentes.findIndex(a => a.idAgente === id);
+      if (idx !== -1) {
+        agentes[idx] = { ...agentes[idx], ...data };
+        localStorage.setItem('intelfon_agents', JSON.stringify(agentes));
+        return true;
+      }
+      
+      throw error;
+    }
+  },
+
+  logout() {
+    localStorage.removeItem('intelfon_user');
+    localStorage.removeItem('intelfon_token');
+    sessionStorage.removeItem('intelfon_user_email');
+    window.location.href = '#/login';
+  },
+
+  // Recuperación de contraseña con webhook (escenario: reset_password)
+  async requestPasswordReset(email: string): Promise<boolean> {
+    // Intentar usar emailService primero (para desarrollo/testing)
+    try {
+      const result = emailService.sendPasswordResetCode(email, false);
+      // También intentar enviar al webhook si está disponible
+      try {
+        await callWebhook('reset_password', { 
+          email,
+          action: 'request_reset' 
+        });
+      } catch (webhookErr) {
+      }
+      return true;
+    } catch (err) {
+    }
+    
+    // Fallback: solo webhook
+    const data = await callWebhook('reset_password', { 
+      email,
+      action: 'request_reset' 
+    });
+    
+    // El webhook puede retornar: { success: boolean, message?: string }
+    if (data.success === false) {
+      throw new Error(data.message || 'Error al solicitar restablecimiento de contraseña');
+    }
+    
+    return true;
+  },
+
+  async verifyResetCode(email: string, code: string): Promise<{ ok: boolean; tempToken?: string }> {
+    // Intentar usar emailService primero (para desarrollo/testing)
+    try {
+      const result = emailService.verifyCode(email, code);
+      if (result.valid && result.tempToken) {
+        // También intentar verificar en el webhook si está disponible
+        try {
+          const webhookData = await callWebhook('reset_password', {
+            email,
+            code,
+            action: 'verify_code'
+          });
+          if (webhookData.tempToken) {
+            return { 
+              ok: true, 
+              tempToken: webhookData.tempToken 
+            };
+          }
+        } catch (webhookErr) {
+        }
+        return { 
+          ok: true, 
+          tempToken: result.tempToken 
+        };
+      } else {
+        throw new Error(result.message || 'Código inválido');
+      }
+    } catch (err: any) {
+    }
+    
+    // Fallback: solo webhook
+    const data = await callWebhook('reset_password', {
+      email,
+      code,
+      action: 'verify_code'
+    });
+    
+    // El webhook debe retornar: { success: boolean, tempToken?: string, message?: string }
+    if (data.success === false) {
+      throw new Error(data.message || 'Código de verificación inválido');
+    }
+    
+    if (!data.tempToken) {
+      throw new Error('Token temporal no recibido del servidor');
+    }
+    
+    return { 
+      ok: true, 
+      tempToken: data.tempToken 
+    };
+  },
+
+  async finalizePasswordReset(email: string, token: string, password: string): Promise<boolean> {
+    const data = await callWebhook('reset_password', {
+      email,
+      tempToken: token,
+      password,
+      action: 'finalize_reset'
+    });
+    
+    // El webhook debe retornar: { success: boolean, message?: string }
+    if (data.success === false) {
+      throw new Error(data.message || 'Error al restablecer la contraseña');
+    }
+    
+    return true;
+  },
+
+  // Crear nueva cuenta de usuario con webhook de crear usuario
+  // El usuario se almacena directamente en el sistema a través del webhook
+  async createAccount(email: string, password: string, name: string, additionalData?: any): Promise<User> {
+
+    // Validaciones previas
+    if (!email || !email.trim()) {
+      throw new Error('El correo electrónico es requerido');
+    }
+    if (!name || !name.trim()) {
+      throw new Error('El nombre es requerido');
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      throw new Error('Formato de correo electrónico inválido');
+    }
+
+    // Obtener el usuario actual (actor)
+    const currentUser = this.getUser();
+    if (!currentUser) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor
+    const actor = buildActorPayload(currentUser);
+
+    // Generar contraseña aleatoria si no se proporciona
+    // Formato: red + 4 dígitos + 4 letras (igual que cuando se crea un agente en Register)
+    const generarPasswordAleatoria = () => {
+      const randomNumber = Math.floor(Math.random() * 9000) + 1000; // Número de 4 dígitos (1000-9999)
+      const letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      let randomLetters = '';
+      for (let i = 0; i < 4; i++) {
+        randomLetters += letters.charAt(Math.floor(Math.random() * letters.length));
+      }
+      return `red${randomNumber}${randomLetters}`; // Ejemplo: red7453aBcD
+    };
+
+    const passwordFinal = password && password.trim() ? password.trim() : generarPasswordAleatoria();
+
+    // Determinar el rol del usuario
+    const rolUsuario = additionalData?.rol || 'AGENTE';
+    
+    // Construir el payload - SIEMPRE usar user.create para crear usuarios desde el panel admin
+    // Esto incluye agentes, supervisores, gerentes, etc.
+    const payload: any = {
+      action: 'user.create',
+      actor: {
+        user_id: String(actor.user_id || ''),
+        email: actor.email,
+        role: actor.role
+      },
+      data: {
+        nombre: name.trim(),
+        email: email.trim().toLowerCase(),
+        password: passwordFinal, // IMPORTANTE: incluir la contraseña generada
+        role: rolUsuario, // IMPORTANTE: usar 'role' no 'rol'
+        pais: additionalData?.pais || 'El Salvador' // Incluir país si está disponible (puede venir como "El Salvador", "Guatemala", "SV", "GT", etc.)
+      }
+    };
+    
+    // Log para debugging
+    
+    const webhookUrl = API_CONFIG.WEBHOOK_CREAR_USUARIO_URL;
+
+    
+    // Llamar al webhook correspondiente
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+
+      if (!response.ok) {
+        if (response.status === 0) {
+          throw new Error('Error de CORS: El servidor no está permitiendo peticiones desde este origen.');
+        }
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText || `Error ${response.status}: ${response.statusText}` };
+        }
+        throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+      }
+
+      // Verificar si la respuesta tiene contenido antes de parsear JSON
+      const contentType = response.headers.get('content-type');
+      
+      const responseText = await response.text();
+
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('El webhook no devolvió ninguna respuesta. Verifica que el flujo de n8n esté configurado correctamente y devuelva los datos del usuario creado.');
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        throw new Error(`El webhook devolvió una respuesta inválida. Respuesta: ${responseText.substring(0, 200)}`);
+      }
+
+      // Verificar si hay error en la respuesta
+      if (result.error === true) {
+        throw new Error(result.message || 'Error al crear el usuario');
+    }
+
+      // El webhook puede retornar:
+      // 1. Un solo usuario creado: result.user, result.agent o result.data
+      // 2. Una lista de usuarios: result.users o result.data (array)
+      let userData = result.user || result.agent || result.data || result;
+      
+      // Si el webhook retorna un array de usuarios
+      if (Array.isArray(userData)) {
+        
+        // Buscar el usuario recién creado (el último o el que coincida con el email)
+        const emailLower = email.trim().toLowerCase();
+        userData = userData.find((u: any) => 
+          (u.email || '').toLowerCase() === emailLower
+        ) || userData[userData.length - 1] || userData[0];
+        
+      }
+      
+      // Crear un objeto User desde los datos del usuario
+    const user: User = {
+        id: userData.user_id || userData.agent_id || userData.id || userData.idAgente || userData.id_agente || `user-${Date.now()}`,
+        name: userData.nombre || userData.name || name.trim(),
+        role: (userData.role || userData.rol || 'AGENTE') as Role,
+        avatar: userData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim())}&background=0f172a&color=fff`
+    };
+
+      // Validar que el rol sea válido
+      if (!['AGENTE', 'SUPERVISOR', 'GERENTE'].includes(user.role)) {
+        throw new Error('Rol de usuario inválido. La cuenta debe tener un rol válido asignado.');
+      }
+
+      // No almacenar el token ni el usuario en localStorage porque esto es para crear agentes, no para autenticarse
+      // El agente creado aparecerá en la lista de agentes cuando se recargue
+
+    return user;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        throw new Error('Timeout: El servidor no respondió a tiempo. Verifica tu conexión.');
+      }
+      
+      if (error.message) {
+        throw error;
+      }
+      
+      throw new Error('Error de conexión con el servidor.');
+    }
+  },
+
+  async reassignCase(caseId: string, newAgentId: string, justification: string): Promise<boolean> {
+    // Usar caseService.reassignCase según la documentación
+    // Formato: update_type: "reassign", case_id, agent_id
+    await caseService.reassignCase(caseId, newAgentId);
+    
+    // Limpiar caché de casos y agentes para forzar actualización
+    // Los agentes necesitan actualizarse porque el número de casos activos cambió
+    clearCache('cases');
+    clearCache('agentes');
+    
+    // Disparar evento para que GestionAgentes recargue los agentes
+    window.dispatchEvent(new CustomEvent('caso-reasignado', {
+      detail: { caseId, newAgentId }
+    }));
+    
+    return true;
+  },
+
+  async addCaseComment(caseId: string, comment: string): Promise<boolean> {
+    const user = this.getUser();
+    const cases = await this.getCases();
+    const idx = cases.findIndex((c: any) => (c.id === caseId || c.idCaso === caseId || c.ticketNumber === caseId));
+    
+    if (idx === -1) {
+      throw new Error('Caso no encontrado');
+    }
+
+    if (!comment || !comment.trim()) {
+      throw new Error('El comentario no puede estar vacío');
+    }
+
+    // Registrar comentario en historial
+    if (!cases[idx].historial) cases[idx].historial = [];
+    cases[idx].historial.unshift({
+      fechaHora: new Date().toISOString(),
+      detalle: comment.trim(),
+      usuario: this.getUser()?.name || 'Sistema'
+    });
+
+    // Intentar actualizar en el backend
+    try {
+      await callCasesWebhook('POST', {
+        action: 'case.update',
+        actor: buildActorPayload(user),
+        data: {
+          case_id: caseId,
+          patch: {
+            comentario: comment.trim()
+          }
+        }
+      });
+    } catch (err) {
+    }
+
+    localStorage.setItem('intelfon_cases', JSON.stringify(cases));
+    clearCache('cases');
+    return true;
+  },
+
+  // Agregar fecha de asueto mediante webhook
+  async addHoliday(date: Date, holidayName?: string | null): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor con el formato esperado
+    const actor = buildActorPayload(user);
+    // Mapear el role: ADMIN -> ADMINISTRADOR, otros roles se mantienen
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Formatear fecha como DD/MM/YYYY
+    // Usar getFullYear, getMonth, getDate para obtener valores en zona horaria local
+    // Asegurarse de que la fecha esté a mediodía para evitar problemas de zona horaria
+    const dateAtNoon = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
+    const day = String(dateAtNoon.getDate()).padStart(2, '0');
+    const month = String(dateAtNoon.getMonth() + 1).padStart(2, '0');
+    const year = dateAtNoon.getFullYear();
+    const dateStr = `${day}/${month}/${year}`;
+    // Construir el payload según el formato esperado
+    const payload = {
+      action: 'asueto.create',
+      actor: {
+        user_id: String(actor.user_id || ''),
+        email: actor.email,
+        role: mappedRole || 'ADMINISTRADOR'
+      },
+      data: {
+        type: 'individual',
+        fecha: dateStr,
+        motivo: holidayName || '',
+        pais: 'El Salvador'
+      }
+    };
+    try {
+      const response = await callAsuetosWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al agregar la fecha de asueto');
+    }
+  },
+
+  // Eliminar fecha de asueto mediante webhook
+  async deleteHoliday(date: Date): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    const actor = buildActorPayload(user);
+    // Mapear el role: ADMIN -> ADMINISTRADOR, otros roles se mantienen
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Formatear fecha como DD/MM/YYYY (mismo formato que usa el webhook)
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const fechaStr = `${day}/${month}/${year}`;
+
+    // Construir el payload con la misma estructura que asueto.read
+    const payload = {
+      action: 'asueto.delete',
+      actor: {
+        user_id: String(actor.user_id || ''),
+        email: actor.email,
+        role: mappedRole || 'ADMINISTRADOR'
+      },
+      data: {
+        fecha: fechaStr
+      }
+    };
+
+    try {
+      const response = await callAsuetosWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al eliminar la fecha de asueto');
+    }
+  },
+
+  // Agregar múltiples fechas de asuetos mediante webhook (carga masiva)
+  async addBulkHolidays(dates: Date[], holidayNames?: (string | null)[]): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor con el formato esperado
+    const actor = buildActorPayload(user);
+    // Mapear el role: ADMIN -> ADMINISTRADOR, otros roles se mantienen
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Formatear fechas como DD/MM/YYYY en un array
+    const fechasArray = dates.map((date) => {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    });
+
+    // Construir el payload según el formato esperado
+    const payload = {
+      action: 'asueto.create',
+      actor: {
+        user_id: String(actor.user_id || ''),
+        email: actor.email,
+        role: mappedRole || 'ADMINISTRADOR'
+      },
+      data: {
+        type: 'masivo',
+        fecha: fechasArray
+      }
+    };
+    try {
+      const response = await callAsuetosWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al agregar las fechas de asuetos');
+    }
+  },
+
+  // Leer fechas de asuetos desde el webhook
+  async readHolidays(): Promise<Array<{ fecha: string; motivo: string; pais: string; row_number: number; fechaDate?: Date }>> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor con el formato esperado
+    const actor = buildActorPayload(user);
+    // Mapear el role: ADMIN -> ADMINISTRADOR, otros roles se mantienen
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Construir el payload según el formato esperado
+    const payload = {
+      action: 'asueto.read',
+      actor: {
+        user_id: String(actor.user_id || ''),
+        email: actor.email,
+        role: mappedRole || 'ADMINISTRADOR'
+      },
+      data: {}
+    };
+
+    try {
+      const response = await callAsuetosWebhook('POST', payload);
+      
+      // Parsear la nueva estructura: [{ data: [...] }]
+      let asuetos: Array<{ fecha: string; motivo: string; pais: string; row_number: number; fechaDate?: Date }> = [];
+      
+      if (Array.isArray(response)) {
+        // La respuesta es un array: [{ data: [...] }]
+        for (const item of response) {
+          if (item && typeof item === 'object' && Array.isArray(item.data)) {
+            // Procesar cada elemento del array data
+            // IMPORTANTE: NO modificar la fecha que viene del webhook - guardarla exactamente como viene
+            asuetos = item.data.map((asueto: any) => {
+              const fechaStr = asueto.fecha || '';
+              let fechaDate: Date | undefined;
+              
+              // Convertir fecha string a Date SOLO para cálculos internos (ordenamiento, etc.)
+              // NO usar esta fecha para mostrar - siempre usar fechaStr directamente
+              if (fechaStr && fechaStr.includes('/')) {
+                try {
+                  const [day, month, year] = fechaStr.split('/').map(Number);
+                  // Crear fecha en zona horaria local a mediodía para evitar problemas de zona horaria
+                  fechaDate = new Date(year, month - 1, day, 12, 0, 0);
+                } catch (error) {
+                }
+              }
+              
+              // Guardar la fecha EXACTAMENTE como viene del webhook en el campo fecha
+              return {
+                fecha: fechaStr, // ESTE es el valor que se debe mostrar - viene directamente del webhook
+                motivo: asueto.motivo || 'Indefinido',
+                pais: asueto.pais || 'Indefinido',
+                row_number: asueto.row_number || 0,
+                fechaDate: fechaDate // Solo para cálculos internos, NO para mostrar
+              };
+            });
+            break; // Solo procesar el primer objeto con data
+          }
+        }
+      } else if (response && typeof response === 'object') {
+        // Si es un objeto directo con data
+        if (Array.isArray(response.data)) {
+          // IMPORTANTE: NO modificar la fecha que viene del webhook - guardarla exactamente como viene
+          asuetos = response.data.map((asueto: any) => {
+            const fechaStr = asueto.fecha || '';
+            let fechaDate: Date | undefined;
+            
+            // Convertir fecha string a Date SOLO para cálculos internos (ordenamiento, etc.)
+            // NO usar esta fecha para mostrar - siempre usar fechaStr directamente
+            if (fechaStr && fechaStr.includes('/')) {
+              try {
+                const [day, month, year] = fechaStr.split('/').map(Number);
+                // Crear fecha en zona horaria local a mediodía para evitar problemas de zona horaria
+                fechaDate = new Date(year, month - 1, day, 12, 0, 0);
+              } catch (error) {
+              }
+            }
+            
+            // Guardar la fecha EXACTAMENTE como viene del webhook en el campo fecha
+            return {
+              fecha: fechaStr, // ESTE es el valor que se debe mostrar - viene directamente del webhook
+              motivo: asueto.motivo || 'Indefinido',
+              pais: asueto.pais || 'Indefinido',
+              row_number: asueto.row_number || 0,
+              fechaDate: fechaDate // Solo para cálculos internos, NO para mostrar
+            };
+          });
+        }
+      }
+      
+      // Ordenar por fecha cronológicamente
+      asuetos.sort((a, b) => {
+        if (a.fechaDate && b.fechaDate) {
+          return a.fechaDate.getTime() - b.fechaDate.getTime();
+        }
+        return a.fecha.localeCompare(b.fecha);
+      });
+      
+      return asuetos;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al leer las fechas de asuetos');
+    }
+  },
+
+  // ==================== PARÁMETROS FINALES ====================
+
+  /**
+   * Leer todos los parámetros de estados finales desde el webhook
+   */
+  async readParametros(): Promise<any[]> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor con el formato esperado
+    const actor = buildActorPayload(user);
+    
+    // Mapear el role
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Construir el payload según el formato especificado
+    const payload = {
+      action: 'parametro.read',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {
+        id: ''  // Vacío para leer todos
+      }
+    };
+    try {
+      const response = await callEstadosWebhook('POST', payload);
+      let parametros: any[] = [];
+      if (Array.isArray(response)) {
+        if (response.length > 0 && response[0]?.data && Array.isArray(response[0].data)) {
+          parametros = response[0].data;
+        } else {
+          parametros = response;
+        }
+      } else if (response && typeof response === 'object') {
+        if (Array.isArray(response.data)) {
+          parametros = response.data;
+        }
+      }
+      return parametros;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al leer los parámetros');
+    }
+  },
+
+  /**
+   * Crear un nuevo parámetro de estado final
+   */
+  async createParametro(parametroData: {
+    nombre_parametro: string;
+    descripcion: string;
+    tipo: string;
+    etiqueta: string;
+    placeholder?: string;
+    requerido?: boolean;
+  }): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor
+    const actor = buildActorPayload(user);
+    
+    // Mapear el role
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Construir el payload
+    const payload = {
+      action: 'parametro.create',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: parametroData
+    };
+    try {
+      const response = await callEstadosWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al crear el parámetro');
+    }
+  },
+
+  /**
+   * Eliminar un parámetro de estado final
+   */
+  async deleteParametro(id: string): Promise<any> {
+    const user = this.getUser();
+    if (!user) {
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
+
+    // Construir el actor
+    const actor = buildActorPayload(user);
+    
+    // Mapear el role
+    const roleMap: Record<string, string> = {
+      'ADMIN': 'ADMINISTRADOR',
+      'AGENTE': 'AGENTE',
+      'SUPERVISOR': 'SUPERVISOR',
+      'GERENTE': 'GERENTE'
+    };
+    const mappedRole = roleMap[actor.role] || actor.role;
+
+    // Construir el payload
+    const payload = {
+      action: 'parametro.delete',
+      actor: {
+        user_id: actor.user_id,
+        email: actor.email,
+        role: mappedRole
+      },
+      data: {
+        id: id
+      }
+    };
+    try {
+      const response = await callEstadosWebhook('POST', payload);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al eliminar el parámetro');
+    }
+  }
+};
